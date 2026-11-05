@@ -1127,6 +1127,25 @@ function renderOutcomes() {
 }
 
 /* ================= GOVERNANCE ================= */
+const BENCH = /*__BENCH__*/null;
+function interopPanel() {
+  const rs = [["Patient", "Person, language, household link"], ["Group", "Household"], ["RelatedPerson", "Parent–child links"],
+    ["DetectedIssue", "Each care gap with its rule, source and follow-up"], ["ImmunizationRecommendation", "Missing or due vaccines"],
+    ["RiskAssessment", "Score, interval, confidence and factors"], ["Consent", "One per data category, permit or deny"],
+    ["Task", "The Family Health Day"], ["CommunicationRequest", "The invitation, with no health detail"], ["AuditEvent", "Every read, write and refusal"]];
+  const b = BENCH || {};
+  const bm = [["Score 3.8 million people (whole emirate)", b.vectorised_scoring_3800000 != null ? `${b.vectorised_scoring_3800000.toFixed(2)} s` : "–"],
+    ["Consent-aware evaluation per person", b.live_eval_us_per_person != null ? `${b.live_eval_us_per_person} µs` : "–"],
+    ["Whole emirate, one CPU core", b.live_eval_3_8M_minutes_one_core != null ? `${b.live_eval_3_8M_minutes_one_core} min` : "–"],
+    ["Family plan API call, 95th percentile", b.family_plan_ms_p95 != null ? `${b.family_plan_ms_p95} ms` : "–"]];
+  return `<div class="grid2">
+    <div class="panel"><h3>Interoperability: FHIR R4 API</h3><p class="small muted" style="margin-bottom:10px">Every output in this console is also served as standard FHIR resources, so Malaffi, facility EMRs and messaging platforms can consume it without custom integration. Each call carries a role and a purpose of use, and is written to the audit trail.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Resource</th><th>Carries</th></tr></thead><tbody>${rs.map(([r, d]) => `<tr><td class="mono">${r}</td><td>${d}</td></tr>`).join("")}</tbody></table></div>
+      <p class="tiny muted" style="margin-top:8px">Roles: clinician, care coordinator, analyst (aggregates only), auditor, family member (own household). 24 automated tests cover rules, privacy and access control.</p></div>
+    <div class="panel"><h3>Measured scale</h3><p class="small muted" style="margin-bottom:10px">Benchmarked on a single laptop core with the prototype code. Rule evaluation is independent per household, so it parallelises across cloud workers.</p>
+      <div class="tbl-wrap"><table><tbody>${bm.map(([l, v]) => `<tr><td>${l}</td><td class="r num"><b>${v}</b></td></tr>`).join("")}</tbody></table></div>
+      <p class="tiny muted" style="margin-top:8px">Abu Dhabi has about 3.8 million residents. Nightly full refresh and on-demand recalculation after a consent change are both well inside interactive time.</p></div></div>`;
+}
 function renderGovernance() {
   const ledger = [
     ["Well-Child Visit and IFHAS records", "Malaffi health information exchange; facility EMR", "Find due and overdue items under the DoH standards", "Always, for eligible people", "Clinician, programme team"],
@@ -1158,6 +1177,7 @@ function renderGovernance() {
       <text x="660" y="288" text-anchor="middle" font-size="10.5" fill="var(--muted)">attendance and results feed recalibration</text>
     </svg></div></div>
   <div><h3 style="margin-bottom:10px">Authorised data use</h3><div class="tbl-wrap"><table><thead><tr><th>Data</th><th>Source</th><th>Used for</th><th>Basis</th><th>Who sees detail</th></tr></thead><tbody>${ledger}</tbody></table></div></div>
+  ${interopPanel()}
   <div class="grid3">${card(M.adult, "Orders adult outreach; suggests diabetes-prevention referral for clinician confirmation")}${card(M.child, "Orders child outreach; flags priority developmental surveillance at the next visit")}${card(M.engage, "Chooses outreach intensity and channel; never affects clinical eligibility")}</div>
   <div class="grid2">
     <div class="panel"><h3>Human oversight</h3><ul class="rules">

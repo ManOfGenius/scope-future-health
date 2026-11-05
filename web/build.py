@@ -6,6 +6,8 @@ W = ROOT / "web"
 tpl = (W / "app.html").read_text()
 data = (ROOT / "data" / "scope.json").read_text().replace("</", "<\\/")
 b64 = lambda p: "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()
+bench = (ROOT / "bench" / "results.json")
+tpl = tpl.replace("/*__BENCH__*/null", bench.read_text() if bench.exists() else "null")
 out = tpl.replace("__LOGO_BIG__", b64(W / "emblem_520.png")).replace("__LOGO_SMALL__", b64(W / "emblem_180.png")).replace("/*__DATA__*/", data)
 (W / "dist").mkdir(exist_ok=True)
 (W / "dist" / "scope.html").write_text(out)
