@@ -51,6 +51,10 @@ class App:
             ("GET", r"/fhir/Consent", self.get_consent, "person-query"),
             ("PUT", r"/fhir/Consent/(P\d+)-(genomic|family_link|social|outreach)", self.put_consent, "person-consent"),
             ("GET", r"/fhir/AuditEvent", self.audit_events, "audit"),
+            ("GET", r"/fhir/Appointment", self.get_appointments, "person-query"),
+            ("GET", r"/fhir/Practitioner/(D\d+)", self.get_practitioner, "directory"),
+            ("GET", r"/fhir/Location/(L\d+)", self.get_location, "directory"),
+            ("POST", r"/fhir/Appointment/(A\d+)/\$sign-encounter", self.sign_encounter, "sign"),
             ("GET", r"/api/worklist", self.worklist, "operational"),
             ("GET", r"/api/audit", self.equity_audit, "aggregate"),
         ]
@@ -61,6 +65,9 @@ class App:
         tok = auth[7:] if auth.startswith("Bearer ") else ""
         if tok in ROLES:
             return tok, ROLES[tok], None
+        m = re.fullmatch(r"practitioner-(D\d+)", tok)
+        if m and m.group(1) in self.S.clinicians:
+            return tok, "clinician", m.group(1)
         m = re.fullmatch(r"family-(P\d+)", tok)
         if m and m.group(1) in self.S.people:
             return tok, "family", m.group(1)
@@ -71,7 +78,7 @@ class App:
             return
         if purpose not in PURPOSES[role]:
             raise HTTPError(403, f"purpose of use '{purpose}' not allowed for role {role}")
-        if role == "analyst" and scope != "aggregate":
+        if role == "analyst" and scope not in ("aggregate",):
             raise HTTPError(403, "analysts may only use aggregated, small-cell-suppressed endpoints")
         if role == "auditor" and scope != "audit":
             raise HTTPError(403, "auditors may only read the audit trail")
@@ -93,7 +100,17 @@ class App:
                     raise HTTPError(403, "family accounts can only see their own household")
             if scope in ("operational", "aggregate", "audit"):
                 raise HTTPError(403, "not available to family accounts")
-        if role in ("clinician", "coordinator") and scope == "aggregate":
+        if scope == "sign":
+            if role != "clinician" or not self_pid:
+                raise HTTPError(403, "only a named practitioner token (practitioner-<id>) can sign an encounter")
+            appt = self.S.appointments.get(args[0])
+            if not appt:
+                raise HTTPError(404, "unknown appointment")
+            if not self.S.may_sign(self_pid, appt):
+                raise HTTPError(403, "only the booked clinician or a same-role colleague at the same clinic can sign this encounter")
+            if purpose != "TREAT":
+                raise HTTPError(403, "signing an encounter requires purpose of use TREAT")
+        if scope == "directory" and role == "analyst":
             return
 
     def manages(self, actor: str, target: str) -> bool:
@@ -122,9 +139,9 @@ class App:
                 if method in ("PUT", "POST"):
                     n = int(environ.get("CONTENT_LENGTH") or 0)
                     body = json.loads(environ["wsgi.input"].read(n) or b"{}")
-                res = fn(*m.groups(), q=q, body=body, actor=actor)
+                res = fn(*m.groups(), q=q, body=body, actor=actor, who=self_pid)
                 if scope is not None:
-                    self.S.log(actor=actor, role=role, action="U" if method == "PUT" else "R", entity=path, purpose=purpose)
+                    self.S.log(actor=actor, role=role, action={"PUT": "U", "POST": "C"}.get(method, "R"), entity=path, purpose=purpose)
                 return self._send(start_response, 200, res)
             raise HTTPError(404, f"no route for {method} {path}")
         except HTTPError as e:
@@ -164,6 +181,12 @@ class App:
     def family_plan(self, hid, **_):
         h = self.S.households[hid]
         res = [fhir.group(self.S, hid), fhir.task(self.S, hid), fhir.communication_request(self.S, hid)]
+        appts = h.get("appts", [])
+        res += [fhir.appointment(self.S, a) for a in appts]
+        for did in {self.S.appointments[a]["clinician"] for a in appts}:
+            res.append(fhir.practitioner(self.S, did))
+        if h.get("home_clinic") in self.S.clinics:
+            res.append(fhir.location(self.S, h["home_clinic"]))
         res += fhir.related_people(self.S, hid)
         for m in h["members"]:
             if not self.S.consent[m]["outreach"]:
@@ -195,6 +218,37 @@ class App:
             {"name": "priorityAfter", "valueDecimal": round(after["priority"], 3)},
             {"name": "affectedRelatives", "valueInteger": sum(1 for m in self.S.people.values() if any(g.get("via") == pid for g in m["gaps"]))},
         ]}
+
+    def get_appointments(self, q, **_):
+        pid = q.get("patient", [""])[0]
+        if pid not in self.S.people:
+            raise HTTPError(404, "unknown patient")
+        ids = [a for a, v in self.S.appointments.items() if v["pid"] == pid]
+        res = [fhir.appointment(self.S, a) for a in ids]
+        for a in ids:
+            v = self.S.appointments[a]
+            res += [fhir.practitioner(self.S, v["clinician"]), fhir.location(self.S, v["clinic"])]
+        return fhir.bundle(res, "searchset")
+
+    def get_practitioner(self, did, **_):
+        return fhir.bundle([fhir.practitioner(self.S, did), fhir.practitioner_role(self.S, did)], "searchset")
+
+    def get_location(self, lid, **_):
+        if lid not in self.S.clinics:
+            raise HTTPError(404, "unknown location")
+        return fhir.location(self.S, lid)
+
+    def sign_encounter(self, aid, body, who, **_):
+        enc = body or {}
+        a = self.S.appointments[aid]
+        for k in a["purposes"]:
+            if not (enc.get("conclusions") or {}).get(k):
+                raise HTTPError(400, f"missing conclusion for purpose {k}")
+        closed = self.S.record_encounter(aid, enc)
+        res = fhir.encounter_resources(self.S, aid, enc, who)
+        return {"resourceType": "Bundle", "type": "transaction-response", "total": len(res),
+                "entry": [{"resource": r, "response": {"status": "201 Created"}} for r in res],
+                "closedItems": len(closed)}
 
     def audit_events(self, **_):
         return fhir.bundle([fhir.audit_event(e, i) for i, e in enumerate(self.S.audit)], "searchset")

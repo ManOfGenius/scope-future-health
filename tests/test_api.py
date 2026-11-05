@@ -1,4 +1,5 @@
 """API behaviour: FHIR shape, access control, consent recomputation, audit trail."""
+import collections
 
 def first(data, pred):
     return next(p for p in data["people"].values() if pred(p))
@@ -97,3 +98,42 @@ def test_every_access_is_audited_including_refusals(client, data):
     assert st == 200
     outcomes = [e["resource"]["outcome"] for e in b["entry"]]
     assert "0" in outcomes and "4" in outcomes
+
+def _appt(data, purpose):
+    return next(a for a in data["appointments"] if purpose in a["purposes"] and a["role"] != "Nurse")
+
+def test_family_plan_carries_appointments_practitioners_location(client, data):
+    h = next(h for h in data["households"] if h.get("appts"))
+    st, b, _ = client.call("GET", f"/fhir/Group/{h['id']}/$family-plan", "coordinator-demo", "CAREMGT")
+    types = collections.Counter(e["resource"]["resourceType"] for e in b["entry"])
+    assert types["Appointment"] == len(h["appts"]) and types["Practitioner"] >= 1 and types["Location"] == 1
+
+def test_only_booked_or_covering_clinician_can_sign(client, data):
+    a = _appt(data, "CMR")
+    other = next(c for c in data["clinicians"] if c["clinic"] != a["clinic"])
+    body = {"findings": {"sbp": 150, "dbp": 95}, "conclusions": {k: "Referred" for k in a["purposes"]}, "icd": ["R03.0"]}
+    assert client.call("POST", f"/fhir/Appointment/{a['id']}/$sign-encounter", f"practitioner-{other['id']}", "TREAT", body)[0] == 403
+    assert client.call("POST", f"/fhir/Appointment/{a['id']}/$sign-encounter", "clinician-demo", "TREAT", body)[0] == 403
+    assert client.call("POST", f"/fhir/Appointment/{a['id']}/$sign-encounter", f"practitioner-{a['clinician']}", "CAREMGT", body)[0] == 403
+
+def test_signing_records_fhir_resources_and_closes_items(client, data):
+    a = _appt(data, "CMR")
+    before = len(client.app.S.visible_gaps(a["pid"]))
+    body = {"findings": {"sbp": 150, "dbp": 95, "a1c": 6.8, "tobacco": "Shisha"}, "conclusions": {k: "Referred" for k in a["purposes"]},
+            "icd": ["R03.0", "Z13.1"], "referrals": [{"to": "Diabetes clinic", "by": "2026-12-01"}], "labs": ["HbA1c (repeat)"],
+            "counselling": ["Tobacco, shisha and medwakh cessation"], "note": "Synthetic test encounter."}
+    st, b, _ = client.call("POST", f"/fhir/Appointment/{a['id']}/$sign-encounter", f"practitioner-{a['clinician']}", "TREAT", body)
+    assert st == 200 and b["type"] == "transaction-response" and b["closedItems"] >= 1
+    rs = [e["resource"] for e in b["entry"]]
+    loinc = {c["code"] for r in rs if r["resourceType"] == "Observation" for c in r["code"]["coding"] if c["system"] == "http://loinc.org"}
+    assert {"8480-6", "8462-4", "4548-4"} <= loinc
+    assert {r["code"]["coding"][0]["code"] for r in rs if r["resourceType"] == "Condition"} == {"R03.0", "Z13.1"}
+    assert any(r["resourceType"] == "ServiceRequest" and r["code"]["text"] == "Diabetes clinic" for r in rs)
+    assert len(client.app.S.visible_gaps(a["pid"])) < before
+    st, b, _ = client.call("GET", f"/fhir/Appointment?patient={a['pid']}", "clinician-demo", "TREAT")
+    assert next(e["resource"] for e in b["entry"] if e["resource"]["id"] == a["id"])["status"] == "fulfilled"
+
+def test_signing_requires_a_conclusion_per_purpose(client, data):
+    a = _appt(data, "CMR")
+    st, b, _ = client.call("POST", f"/fhir/Appointment/{a['id']}/$sign-encounter", f"practitioner-{a['clinician']}", "TREAT", {"conclusions": {}})
+    assert st == 400

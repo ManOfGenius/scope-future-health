@@ -261,6 +261,12 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0}
 .code{font-family:var(--f-mono);font-size:1.1rem;letter-spacing:.2em;background:var(--surface-2);padding:6px 10px;border-radius:6px;display:inline-block}
 
 @media (max-width:860px){.cv-grid{grid-template-columns:1fr!important}}
+.cvset{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:10px;margin:0}
+.cvset legend{font-family:var(--f-display);font-size:1.02rem;padding:0 6px}
+.cvfields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}
+.cvf{display:grid;gap:4px;font-size:.84rem} .cvf input[type=number],.cvf select{width:100%}
+.cvf input[type=number]{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font:inherit;color:var(--ink)}
+.cvcheck{display:flex;gap:8px;align-items:flex-start} .cvcheck input{margin-top:3px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -271,7 +277,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0}
     <button class="themebtn" id="themebtn" type="button"></button>
     <nav class="tabs" aria-label="Sections">
       <a href="#overview">Overview</a><a href="#worklist">Outreach worklist</a><a href="#family">Family view</a>
-      <a href="#family-app">Family app</a><a href="#clinic">Clinic visit</a><a href="#safeguards">Safeguards</a><a href="#outcomes">Outcomes</a><a href="#governance">Governance</a>
+      <a href="#family-app">Family app</a><a href="#clinic">Clinician</a><a href="#safeguards">Safeguards</a><a href="#outcomes">Outcomes</a><a href="#governance">Governance</a>
     </nav>
   </div>
   <div class="glowline" aria-hidden="true"></div>
@@ -525,7 +531,7 @@ function renderWorklist() {
       <td>${over ? `<span class="chip c-over">${over} overdue</span> ` : ""}${risk ? `<span class="chip c-risk">${risk} risk-based</span>` : ""}</td>
       <td><div class="pbar" data-tip="Priority ${pr.toFixed(1)}"><i style="width:${Math.min(100, pr / rows[0].pr * 100)}%"></i></div></td>
       <td>${confB(minConf(h))}</td>
-      <td class="small">${h.slot ? `${dateTxt(h.slot.date).split(",").slice(0, 2).join(",")}<div class="tiny muted">${esc(h.slot.time)}</div>` : "–"}</td>
+      <td class="small">${h.slot ? `${dateTxt(h.slot.date).split(",").slice(0, 2).join(",")}<div class="tiny muted">${esc(h.slot.time)} · ${esc((LOCS[h.home_clinic] || {}).name || "")}</div>` : h.waitlist ? "Next cycle" : "–"}</td>
       <td class="small">${esc(h.channel)}</td></tr>`;
   }).join("");
   $("#v-worklist").innerHTML = `
@@ -634,14 +640,17 @@ function familyPlan(h) {
   const mem = h.members.map(m => P[m]).filter(p => live(p).gaps.length && C(p.id).outreach);
   const cp = P[h.contact];
   if (!mem.length) return `<div class="plan"><span class="eyebrow">Family Health Day</span><p>No open items for this household under the current choices.</p></div>`;
-  const items = mem.map(p => `<li><b>${esc(p.first)}</b>: ${live(p).gaps.filter(g => g.s !== "system").map(g => esc(g.i.replace(/ \(.*?\)$/, ""))).join("; ") || "community health check"}</li>`).join("");
+  const appts = (APPT_BY_HH[h.id] || []).slice().sort((x, y) => x.start.localeCompare(y.start));
+  const items = appts.length ? appts.map(x => `<li><b>${esc(x.start)}</b> ${esc(P[x.pid].first)} with ${esc(CLIN[x.clinician].name)} <span class="muted">(${esc(CLIN[x.clinician].role.toLowerCase())}${x.continuity ? ", treating physician" : x.role === "Nurse" ? "" : ", covering"}${x.interpreter ? ", interpreter" : ""})</span><br><span class="tiny">${x.purposes.map(k => PURP[k].label).join(" · ")}${ENCOUNTERS[x.id] ? " · signed" : ""}</span></li>`).join("")
+    : mem.map(p => `<li><b>${esc(p.first)}</b>: ${live(p).gaps.filter(g => g.s !== "system").map(g => esc(g.i.replace(/ \(.*?\)$/, ""))).join("; ") || "community health check"}</li>`).join("");
+  const home = LOCS[h.home_clinic];
   return `<div class="plan"><span class="eyebrow">Proposed Family Health Day</span>
     <span class="when">${h.slot ? dateTxt(h.slot.date) + " · " + esc(h.slot.time) : "To be scheduled"}</span>
-    <span class="small">${esc(h.district)} ${h.housing === "labour accommodation" ? "mobile clinic stop" : "Healthcare Centre"} · ${mem.length} ${mem.length > 1 ? "people in one visit" : "person"}</span>
+    <span class="small">${esc(home ? home.name : h.district)} · ${appts.length || mem.length} ${(appts.length || mem.length) > 1 ? "people in one session" : "person"}${h.waitlist ? " · waitlisted for next cycle" : ""}</span>
     <ul>${items}</ul>
     ${h.slot && h.slot.why.length ? `<p class="tiny">Timing: ${esc(h.slot.why.join("; "))}.</p>` : ""}
     <p class="small">Invitation to <b>${esc(cp.first)}</b> (${esc(h.audience)}) by ${esc(h.channel.toLowerCase())}, in ${esc(h.lang)}.</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="to-msg">See it on the family's phone</button><button class="btn ghost" id="to-clinic">Open the visit checklist</button></div></div>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="to-msg">See it on the family's phone</button>${appts.length ? `<button class="btn ghost" id="to-clinic">Open in the clinician workspace</button>` : ""}</div></div>`;
 }
 
 function renderFamily() {
@@ -666,7 +675,7 @@ function renderFamily() {
   </div>`;
   $("#fam-pick").onchange = e => openFamily(e.target.value);
   const tm = $("#to-msg"); if (tm) tm.onclick = () => { faInit(h); location.hash = "family-app"; };
-  const tc = $("#to-clinic"); if (tc) tc.onclick = () => { VISIT.hh = h.id; location.hash = "clinic"; };
+  const tc = $("#to-clinic"); if (tc) tc.onclick = () => { const x = (APPT_BY_HH[h.id] || []).find(y => y.role !== "Nurse") || (APPT_BY_HH[h.id] || [])[0]; if (x) { CV.me = x.clinician; CV.date = x.date; CV.appt = x.id; CV.msg = ""; } location.hash = "clinic"; };
   document.querySelectorAll("#v-family .node").forEach(n => { const go = () => $("#m-" + n.dataset.person).scrollIntoView({behavior: "smooth", block: "start"}); n.onclick = go; n.onkeydown = e => { if (e.key === "Enter") go(); }; });
   document.querySelectorAll("#v-family .tog input").forEach(i => i.onchange = () => { C(i.dataset.p)[i.dataset.k] = i.checked; const y = scrollY; renderFamily(); scrollTo(0, y); });
 }
@@ -813,7 +822,7 @@ function faInit(h) {
     stage: 0, callback: false, letterSent: false, letterPick: {}, stopped: false, saved: false,
     chat: [{who: "bot", kind: "invite"}, {who: "bot", kind: "link"}]});
 }
-const clinicOf = h => h.housing === "labour accommodation" ? h.district : `${h.district} Healthcare Centre`;
+const clinicOf = h => (LOCS[h.home_clinic] || {}).name || `${h.district} Healthcare Centre`;
 const fill = (t, o) => t.replace(/\{(\w+)\}/g, (_, k) => o[k] ?? "");
 const timeOf = s => s.time.split(" ")[0];
 
@@ -919,7 +928,7 @@ function appScreen(h) {
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="fa-confirm">${u.confirm}</button><button class="btn ghost" data-scr="visit">${u.change}</button></div>`}</div>`;
     const rows = mem.map(p => { const g = live(p).gaps.filter(x => C(p.id).outreach);
       return `<button class="app-row" data-mem="${p.id}"><span class="av">${esc(p.first[0])}</span><span class="grow"><b>${esc(p.first)}</b><span class="tiny muted">${roleName(p)} · ${u.age(p.age)}</span></span>
-        <span class="tiny ${g.length ? "" : "muted"}">${g.length ? u.checks(g.length) : u.upToDate}</span><span class="chev">${ui === "ar" ? "‹" : "›"}</span></button>`; }).join("");
+        <span class="tiny ${g.length ? "" : "muted"}" style="text-align:end">${g.length ? u.checks(g.length) : u.upToDate}${p.appt && APPT[p.appt] ? `<br>${esc(APPT[p.appt].start)} · ${esc(CLIN[APPT[p.appt].clinician].name)}` : ""}</span><span class="chev">${ui === "ar" ? "‹" : "›"}</span></button>`; }).join("");
     body = `<p style="font-family:var(--f-display);font-size:1.2rem">${fill(u.hello, {name: esc(cp.first)})}</p>
       ${FA.stopped || !C(cp.id).outreach ? `<div class="app-card"><span class="small">${u.stopped}</span></div>` : planned.length ? card : `<div class="app-card"><span class="small">${u.nothing}</span></div>`}
       ${received ? `<button class="app-row" data-scr="letter"><span class="av">✉</span><span class="grow"><b>${u.received}</b></span><span class="chev">${ui === "ar" ? "‹" : "›"}</span></button>` : ""}
@@ -1030,151 +1039,334 @@ function renderFamilyApp() {
   const send = $("#fa-send"); if (send) send.onclick = () => { FA.letterSent = true; re(); };
 }
 
-/* ================= CLINIC VISIT (clinician at the Family Health Day) ================= */
-const VISIT = {hh: null, results: {}};   // results[pid|gi] = {kind, value, outcome, referral, closed, declined}
-const keyOf = (pid, gi) => pid + "|" + gi;
-const MCHAT_RULES = ["WCV-MCHAT-18", "WCV-MCHAT-24"];
-const HB_RULES = ["WCV-CBC-12", "EARLY-CBC"];
-const A1C_RULES = ["IF-CORE", "DPP"];
-const RECALL_Y = {"IF-CORE": 3, "IF-CRC": 1, "IF-MAMMO": 2, "IF-CERV": 3, "IF-FUNDUS": 1, "IF-DEXA": 2, "IF-MOCA": 3, "LDCT": 1};
+/* ================= CLINICIAN WORKSPACE (appointments, protocol by predictive purpose, signed encounters) ================= */
+const LOCS = Object.fromEntries(D.clinics.map(c => [c.id, c]));
+const CLIN = Object.fromEntries(D.clinicians.map(c => [c.id, c]));
+const APPT = Object.fromEntries(D.appointments.map(a => [a.id, a]));
+const APPT_BY_HH = {};
+D.appointments.forEach(a => (APPT_BY_HH[a.hh] = APPT_BY_HH[a.hh] || []).push(a));
+const PURP = D.purposes, RP = D.rule_purpose;
+const ENCOUNTERS = {};                    // apptId -> signed encounter
+const DRAFT = {};                         // apptId -> working state
+const CV = {me: null, date: null, appt: null, store: "pending", viewer: null, saving: false, msg: ""};
+let DB = null;
+
+const LABS = ["CBC with indices", "Ferritin", "Haemoglobin analysis (HPLC)", "HbA1c (repeat)", "Lipid profile", "eGFR and urine ACR", "FIT kit", "Fasting glucose"];
+const REFERRALS = ["Neurodevelopment clinic", "Speech and language therapy", "Audiology", "Ophthalmology", "Dental", "Dietitian", "Diabetes clinic", "Diabetes prevention programme", "Genetic counselling", "Lipid clinic", "Colonoscopy", "Mammography", "Low-dose CT", "Mental health", "Paediatric review (same day)"];
+const COUNSEL = ["Healthy eating and activity", "Tobacco, shisha and medwakh cessation", "Iron-rich diet and formula", "Screen time and play", "Safe sleep and injury prevention", "Family letter for relatives"];
+const ICD = {
+  "Z00.129": "Routine child health exam, no abnormal findings", "Z00.121": "Routine child health exam, abnormal findings",
+  "Z13.42": "Screening for global developmental delays", "R62.50": "Lack of expected normal physiological development", "F80.9": "Developmental disorder of speech and language",
+  "D64.9": "Anaemia, unspecified", "D50.9": "Iron deficiency anaemia", "D56.3": "Thalassaemia minor", "Z23": "Encounter for immunisation",
+  "Z00.00": "Adult general exam, no abnormal findings", "Z00.01": "Adult general exam, abnormal findings", "R73.03": "Prediabetes", "E11.9": "Type 2 diabetes without complications",
+  "R03.0": "Elevated blood pressure reading, no diagnosis of hypertension", "E78.00": "Pure hypercholesterolaemia, unspecified", "E66.9": "Obesity, unspecified", "F17.210": "Nicotine dependence, cigarettes",
+  "Z12.11": "Screening for colon cancer", "Z12.31": "Screening mammogram", "Z12.4": "Screening for cervical cancer", "Z13.1": "Screening for diabetes",
+  "Z84.81": "Family history of carrier of genetic disease", "Z71.83": "Non-diagnostic genetic counselling", "Z02.89": "School health examination",
+};
+const PROTOCOL = {
+  DEV: [{id: "mchat", label: "M-CHAT-R score", type: "number", unit: "0–20", min: 0, max: 20, when: p => p.age * 12 >= 16 && p.age * 12 < 36},
+        {id: "milestones", label: "Developmental milestones for age", type: "choice", options: ["Age-appropriate", "Concern"]},
+        {id: "speech", label: "Speech and language", type: "choice", options: ["Age-appropriate", "Delay"]},
+        {id: "hearingdev", label: "Parent reports hearing concern", type: "choice", options: ["No", "Yes"]},
+        {id: "growth", label: "Weight, length and head circumference plotted", type: "check"}],
+  ANA: [{id: "hb", label: "Haemoglobin", type: "number", unit: "g/dL", min: 3, max: 20},
+        {id: "mcv", label: "MCV", type: "number", unit: "fL", min: 40, max: 120},
+        {id: "diet", label: "Diet reviewed (iron-rich foods, fortified formula)", type: "check"}],
+  GEN: [{id: "pedigree", label: "Three-generation pedigree recorded", type: "check"},
+        {id: "ldl", label: "LDL cholesterol", type: "number", unit: "mmol/L", min: 0.5, max: 20},
+        {id: "letter", label: "Family letter discussed", type: "check"}],
+  CMR: [{id: "sbp", label: "Systolic blood pressure", type: "number", unit: "mmHg", min: 70, max: 260},
+        {id: "dbp", label: "Diastolic blood pressure", type: "number", unit: "mmHg", min: 40, max: 160},
+        {id: "bmi", label: "BMI", type: "number", unit: "kg/m²", min: 12, max: 70},
+        {id: "waist", label: "Waist", type: "number", unit: "cm", min: 40, max: 200},
+        {id: "a1c", label: "HbA1c", type: "number", unit: "%", min: 3, max: 18},
+        {id: "ldl", label: "LDL cholesterol", type: "number", unit: "mmol/L", min: 0.5, max: 20},
+        {id: "tobacco", label: "Tobacco use", type: "choice", options: ["None", "Cigarette", "Shisha", "Medwakh"]},
+        {id: "phq2", label: "PHQ-2 score", type: "number", unit: "0–6", min: 0, max: 6}],
+  CAN: [{id: "fit", label: "Colorectal: FIT", type: "choice", options: ["Not due", "Kit issued", "Negative", "Positive"]},
+        {id: "mammo", label: "Mammogram booked", type: "check", when: p => p.sex === "F" && p.age >= 40},
+        {id: "cerv", label: "Cervical sample taken", type: "check", when: p => p.sex === "F" && p.age >= 25},
+        {id: "sdm", label: "Benefits and harms discussed", type: "check"}],
+  WCV: [{id: "growthc", label: "Growth and BMI centile", type: "choice", options: ["Normal", "Concern"]},
+        {id: "vision", label: "Vision", type: "choice", options: ["Pass", "Refer"], when: p => p.age >= 3},
+        {id: "hearing", label: "Hearing", type: "choice", options: ["Pass", "Refer"], when: p => p.age >= 4},
+        {id: "bpc", label: "Blood pressure", type: "choice", options: ["Normal", "Elevated"], when: p => p.age >= 3},
+        {id: "oral", label: "Oral health", type: "choice", options: ["No caries", "Caries"]},
+        {id: "guidance", label: "Anticipatory guidance given", type: "check"}],
+  IMM: [],
+  SCH: [{id: "bmicat", label: "BMI category", type: "choice", options: ["Healthy", "Overweight", "Obese", "Underweight"]},
+        {id: "visions", label: "Vision", type: "choice", options: ["Pass", "Refer"]},
+        {id: "hearings", label: "Hearing", type: "choice", options: ["Pass", "Refer"]},
+        {id: "scoliosis", label: "Scoliosis", type: "choice", options: ["Pass", "Refer"]},
+        {id: "wellbeing", label: "Wellbeing screen", type: "choice", options: ["No concern", "Concern"]},
+        {id: "smokes", label: "Smoking or vaping", type: "choice", options: ["No", "Yes"], when: p => p.age >= 10}],
+  COM: [{id: "sbp", label: "Systolic blood pressure", type: "number", unit: "mmHg", min: 70, max: 260},
+        {id: "dbp", label: "Diastolic blood pressure", type: "number", unit: "mmHg", min: 40, max: 160},
+        {id: "rbg", label: "Random blood glucose", type: "number", unit: "mmol/L", min: 1, max: 40},
+        {id: "bmi", label: "BMI", type: "number", unit: "kg/m²", min: 12, max: 70}],
+};
+const OUTCOMES = {IMM: ["Completed", "Partly completed", "Declined"], _: ["No concern", "Concern, monitor", "Referred", "Diagnosis confirmed", "Declined"]};
+
+function suggest(p, ps, f) {
+  // decision support: WCV standard thresholds (M-CHAT-R, Hb, hearing), standard BP, HbA1c, LDL and glucose cut-offs
+  const out = [], add = (level, text, acts = {}, icd = []) => out.push({level, text, acts, icd});
+  const n = k => (f[k] === "" || f[k] == null) ? null : +f[k];
+  const hbb = [p.mother, p.father].filter(Boolean).some(x => P[x] && (P[x].genomic || []).includes("HBB"));
+  if (ps.includes("DEV")) {
+    const m = n("mchat");
+    if (m != null) {
+      if (m <= 2) add("ok", "M-CHAT-R low risk (0–2).", {}, ["Z13.42"]);
+      else if (m <= 7) add("warn", "M-CHAT-R moderate risk (3–7): refer within 4 weeks; primary-care follow-up at 1 month.", {ref: [["Neurodevelopment clinic", 28], ["Speech and language therapy", 28]]}, ["Z13.42", "R62.50"]);
+      else add("crit", "M-CHAT-R high risk (8–20): refer within 2 weeks.", {ref: [["Neurodevelopment clinic", 14], ["Speech and language therapy", 14]]}, ["Z13.42", "R62.50"]);
+    }
+    if (f.milestones === "Concern") add("warn", "Milestone concern: developmental assessment.", {ref: [["Neurodevelopment clinic", 28]]}, ["R62.50"]);
+    if (f.speech === "Delay") add("warn", "Speech delay: speech and language therapy.", {ref: [["Speech and language therapy", 28]]}, ["F80.9"]);
+    if (f.hearingdev === "Yes") add("warn", "Hearing concern: audiology within 2 weeks.", {ref: [["Audiology", 14]]});
+  }
+  if (ps.includes("ANA")) {
+    const hb = n("hb"), mcv = n("mcv");
+    if (hb != null && hb < 7) add("crit", `Hb ${hb} g/dL: same-day paediatric review.`, {ref: [["Paediatric review (same day)", 0]]}, ["D64.9"]);
+    else if (hb != null && hb < 11) add("warn", `Hb ${hb} g/dL below 11: etiologic evaluation.` + (hbb ? " A parent carries a haemoglobin variant: haemoglobin analysis before iron." : ""), {lab: ["CBC with indices", "Ferritin", ...(hbb ? ["Haemoglobin analysis (HPLC)"] : [])], counsel: ["Iron-rich diet and formula"]}, ["D64.9"]);
+    else if (hb != null) add("ok", `Hb ${hb} g/dL: no anaemia.`);
+    if (mcv != null && mcv < 70 && hbb) add("warn", "Microcytosis with a carrier parent: consider thalassaemia trait.", {lab: ["Haemoglobin analysis (HPLC)"]}, ["D56.3"]);
+  }
+  if (ps.includes("CMR") || ps.includes("COM")) {
+    const s = n("sbp"), d = n("dbp");
+    if (s != null && d != null) {
+      if (s >= 180 || d >= 120) add("crit", `BP ${s}/${d}: hypertensive urgency range, same-day physician review.`, {}, ["R03.0"]);
+      else if (s >= 140 || d >= 90) add("warn", `BP ${s}/${d}: confirm with repeat or ambulatory readings.`, {}, ["R03.0"]);
+      else if (s >= 130 || d >= 80) add("warn", `BP ${s}/${d}: elevated; lifestyle advice, recheck in 3–6 months.`, {counsel: ["Healthy eating and activity"]});
+    }
+    const a = n("a1c");
+    if (a != null) {
+      if (a >= 6.5) add("crit", `HbA1c ${a}%: diabetes range. Confirm with a repeat test, then diabetes pathway.`, {lab: ["HbA1c (repeat)", "eGFR and urine ACR"], ref: [["Diabetes clinic", 14]]}, ["Z13.1"]);
+      else if (a >= 5.7) add("warn", `HbA1c ${a}%: prediabetes. Diabetes prevention programme; repeat in 12 months.`, {ref: [["Diabetes prevention programme", 30]], counsel: ["Healthy eating and activity"]}, ["R73.03"]);
+      else add("ok", `HbA1c ${a}%: normal.`, {}, ["Z13.1"]);
+    }
+    const g = n("rbg");
+    if (g != null && g >= 11.1) add("crit", `Random glucose ${g} mmol/L: physician review within 7 days with HbA1c.`, {lab: ["HbA1c (repeat)"]});
+    else if (g != null && g >= 7.8) add("warn", `Random glucose ${g} mmol/L: HbA1c to clarify.`, {lab: ["HbA1c (repeat)"]});
+    const b = n("bmi");
+    if (b != null && b >= 30) add("warn", `BMI ${b}: obesity; dietitian and activity plan.`, {ref: [["Dietitian", 42]], counsel: ["Healthy eating and activity"]}, ["E66.9"]);
+    if (f.tobacco && f.tobacco !== "None") add("warn", `${f.tobacco} use: cessation support.`, {counsel: ["Tobacco, shisha and medwakh cessation"]}, f.tobacco === "Cigarette" ? ["F17.210"] : []);
+    const q = n("phq2");
+    if (q != null && q >= 3) add("warn", "PHQ-2 ≥ 3: complete PHQ-9; mental health referral if indicated.", {ref: [["Mental health", 28]]});
+  }
+  if (ps.includes("CMR") || ps.includes("GEN")) {
+    const l = n("ldl"), lim = p.age < 18 ? 4.0 : 4.9;
+    if (l != null && l >= lim) add("warn", `LDL ${l} mmol/L ≥ ${lim}: possible familial hypercholesterolaemia; score with Dutch Lipid Clinic criteria.`, {ref: [["Lipid clinic", 42], ["Genetic counselling", 42]]}, ["E78.00"]);
+  }
+  if (ps.includes("GEN")) add("info", "Familial variant in a first-degree relative: genetic counselling.", {ref: [["Genetic counselling", 42]], counsel: ["Family letter for relatives"]}, ["Z84.81", "Z71.83"]);
+  if (ps.includes("CAN")) {
+    if (f.fit === "Positive") add("crit", "Positive FIT: colonoscopy within 30 days.", {ref: [["Colonoscopy", 30]]}, ["Z12.11"]);
+    if (f.fit === "Kit issued") add("info", "FIT kit issued: result expected within 14 days.", {lab: ["FIT kit"]}, ["Z12.11"]);
+    if (f.mammo) add("info", "Mammogram booked.", {ref: [["Mammography", 28]]}, ["Z12.31"]);
+    if (f.cerv) add("info", "Cervical sample taken.", {}, ["Z12.4"]);
+  }
+  if (ps.includes("WCV")) {
+    if (f.vision === "Refer") add("warn", "Vision referral (red flags: immediate).", {ref: [["Ophthalmology", 28]]}, ["Z00.121"]);
+    if (f.hearing === "Refer") add("warn", "Abnormal hearing: follow-up within 7 days, specialist within 2–4 weeks.", {ref: [["Audiology", 14]]}, ["Z00.121"]);
+    if (f.oral === "Caries") add("warn", "Caries: dental referral.", {ref: [["Dental", 28]]}, ["Z00.121"]);
+    if (f.growthc === "Concern") add("warn", "Growth concern: dietitian and paediatric follow-up.", {ref: [["Dietitian", 28]]}, ["Z00.121"]);
+    if (f.bpc === "Elevated") add("warn", "Elevated BP: repeat measurement; consider renal causes.", {}, ["Z00.121"]);
+    const wk = ["vision", "hearing", "oral", "growthc", "bpc"];
+    if (wk.some(k => f[k]) && !wk.some(k => ["Refer", "Caries", "Concern", "Elevated"].includes(f[k]))) add("ok", "Well-Child Visit items recorded so far are normal.", {}, ["Z00.129"]);
+  }
+  if (ps.includes("SCH")) {
+    [["visions", "Ophthalmology"], ["hearings", "Audiology"]].forEach(([k, r]) => { if (f[k] === "Refer") add("warn", `${r} referral from the school check.`, {ref: [[r, 28]]}); });
+    if (f.scoliosis === "Refer") add("warn", "Scoliosis screen positive: orthopaedic or physiotherapy review.", {});
+    if (f.bmicat === "Obese") add("warn", "Obesity: dietitian and family activity plan.", {ref: [["Dietitian", 42]]}, ["E66.9"]);
+    if (f.wellbeing === "Concern") add("warn", "Wellbeing concern: school counsellor and mental health.", {ref: [["Mental health", 28]]});
+    if (f.smokes === "Yes") add("warn", "Smoking or vaping: cessation counselling.", {counsel: ["Tobacco, shisha and medwakh cessation"]});
+    add("info", "School health examination.", {}, ["Z02.89"]);
+  }
+  if (ps.includes("IMM")) add("info", "Record each dose given in the immunisation registry.", {}, ["Z23"]);
+  return out;
+}
+
+function draftFor(a) {
+  if (!DRAFT[a.id]) DRAFT[a.id] = {findings: {}, labs: [], refs: [], counsel: [], vaccines: [], conclusions: {}, icd: [], note: ""};
+  return DRAFT[a.id];
+}
+function applyActs(dr, acts, slotDate) {
+  (acts.lab || []).forEach(l => { if (!dr.labs.includes(l)) dr.labs.push(l); });
+  (acts.counsel || []).forEach(c => { if (!dr.counsel.includes(c)) dr.counsel.push(c); });
+  (acts.ref || []).forEach(([to, days]) => { if (!dr.refs.some(r => r.to === to)) dr.refs.push({to, by: plusDays(slotDate, days)}); });
+}
 const dateY = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"});
 function plusDays(iso, n) { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + Math.round(n)); return d.toISOString().slice(0, 10); }
-
-function decide(p, g, value) {
-  // decision support from the WCV standard thresholds and standard HbA1c cut-offs; the clinician confirms
-  if (MCHAT_RULES.includes(g.r)) {
-    const v = +value;
-    if (v <= 2) return {level: "ok", text: p.age * 12 < 24 ? "Low risk (0–2). Re-screen at the 24-month visit." : "Low risk (0–2). No further screen unless indicated.", referral: null};
-    if (v <= 7) return {level: "warn", text: "Moderate risk (3–7). Refer to neurodevelopment clinic and speech therapy within 4 weeks; primary-care follow-up at 1 month.", referral: {what: "Neurodevelopment clinic + speech therapy", days: 28}};
-    return {level: "crit", text: "High risk (8–20). Refer to neurodevelopment clinic and speech therapy within 2 weeks; primary-care follow-up at 1 month.", referral: {what: "Neurodevelopment clinic + speech therapy (urgent)", days: 14}};
-  }
-  if (HB_RULES.includes(g.r)) {
-    const v = +value, carrier = (p.clin && p.clin.hb != null) || false;
-    if (v >= 11) return {level: "ok", text: `Hb ${v} g/dL: no anaemia under the WCV threshold (11 g/dL).`, referral: null};
-    const hbb = [p.mother, p.father].filter(Boolean).some(x => P[x] && (P[x].genomic || []).includes("HBB"));
-    return {level: "warn", text: `Hb ${v} g/dL is below 11: etiologic evaluation required (MCV, RDW, iron studies).` + (hbb ? " A parent carries a haemoglobin variant: consider haemoglobin analysis before starting iron." : " If iron deficiency is confirmed: elemental iron 3–6 mg/kg once daily."), referral: {what: "Anaemia work-up and review", days: 7}};
-  }
-  if (A1C_RULES.includes(g.r)) {
-    const v = +value;
-    if (v < 5.7) return {level: "ok", text: `HbA1c ${v}%: normal range.`, referral: null};
-    if (v < 6.5) return {level: "warn", text: `HbA1c ${v}%: prediabetes range (5.7–6.4%). Offer the diabetes prevention programme; repeat in 12 months.`, referral: {what: "Diabetes prevention programme", days: 30}};
-    return {level: "crit", text: `HbA1c ${v}%: in the diabetes range (≥ 6.5%). Confirm with a repeat test, then start the diabetes care pathway.`, referral: {what: "Confirmatory HbA1c and diabetes clinic", days: 14}};
-  }
-  return null;
+const RECALL_Y = {"IF-CORE": 3, "IF-CRC": 1, "IF-MAMMO": 2, "IF-CERV": 3, "IF-FUNDUS": 1, "IF-DEXA": 2, "IF-MOCA": 3, "LDCT": 1};
+function recallsFor(p, gaps, slotDate) {
+  const out = [];
+  gaps.forEach(g => {
+    if (RECALL_Y[g.r]) out.push({what: g.i.split(" (")[0], date: plusDays(slotDate, RECALL_Y[g.r] * 365)});
+    if (g.r === "SCH-ANNUAL") out.push({what: "Annual school health check", date: plusDays(slotDate, 365)});
+  });
+  if (p.age < 7) { const m = p.age * 12, nx = D.rules.wcv_ages.find(x => x > m + 0.5); if (nx) out.push({what: `Well-Child Visit at ${nx < 24 ? nx + " months" : nx / 12 + " years"}`, date: plusDays(slotDate, (nx - m) * 30.4)}); }
+  return out.filter((x, i) => out.findIndex(y => y.what === x.what) === i);
 }
 
-function recallFor(p, g, slotDate) {
-  if (RECALL_Y[g.r]) return {what: g.i.split(" (")[0], date: plusDays(slotDate, RECALL_Y[g.r] * 365)};
-  if (g.r === "WCV-VISIT" || g.r === "VAX") {
-    const m = p.age * 12, nx = D.rules.wcv_ages.find(x => x > m + 0.5);
-    if (nx) return {what: `Well-Child Visit at ${nx < 24 ? nx + " months" : nx / 12 + " years"}`, date: plusDays(slotDate, (nx - m) * 30.4)};
-  }
-  if (g.r === "SCH-ANNUAL") return {what: "Annual school health check", date: plusDays(slotDate, 365)};
-  return null;
+/* ---------- shared store: signed encounters (falls back to this screen only) ---------- */
+function encGaps(enc) { return (enc.closed || []).map(i => enc.pid + "|" + i); }
+function ingest(id, enc) { ENCOUNTERS[id] = enc; encGaps(enc).forEach(k => CLOSED.add(k)); }
+(async function initStore() {
+  try {
+    const use = window.claude && window.claude.use;
+    if (!use) { CV.store = "local"; return; }
+    const [db, user] = await Promise.all([use("db"), use("user")]);
+    if (user) { try { CV.viewer = await user.id(); } catch (e) {} }
+    if (!db) { CV.store = "local"; if (currentView() === "clinic") renderClinician(); return; }
+    DB = db; CV.store = "loading";
+    const timer = setTimeout(() => { if (CV.store === "loading") { CV.store = "slow"; if (currentView() === "clinic") renderClinician(); } }, 10000);
+    db.collection("encounters").onSnapshot(snap => {
+      if (!snap.metadata.fromCache) { clearTimeout(timer); CV.store = "live"; }
+      snap.docs.forEach(d => { const v = d.data(); if (v) ingest(d.id, v); });
+      const v = currentView(); if (v === "clinic" || v === "family" || v === "worklist") VIEWS[v]();
+    }, err => { clearTimeout(timer); CV.store = "error"; CV.msg = err && err.message || "The shared record could not be reached."; if (currentView() === "clinic") renderClinician(); });
+  } catch (e) { CV.store = "local"; }
+})();
+function currentView() { const h = (location.hash || "#home").slice(1); return h === "family-app" ? "familyapp" : h.startsWith("family-") ? "family" : h; }
+
+async function signEncounter(a) {
+  const p = P[a.pid], dr = draftFor(a), ps = a.purposes;
+  const missing = ps.filter(k => !dr.conclusions[k]);
+  if (missing.length) { CV.msg = `Add a conclusion for: ${missing.map(k => PURP[k].label).join(", ")}.`; renderClinician(); return; }
+  const closed = [];
+  p.gaps.forEach((g, i) => { if (ps.includes(RP[g.r]) && gapVisible(p, g)) closed.push(i); });
+  const enc = {appt: a.id, pid: a.pid, hh: a.hh, clinician: CV.me, clinic: a.clinic, date: a.date, purposes: ps,
+    findings: dr.findings, conclusions: dr.conclusions, icd: dr.icd, labs: dr.labs, referrals: dr.refs, counselling: dr.counsel,
+    vaccines: dr.vaccines, note: dr.note.slice(0, 4000), closed, recalls: recallsFor(p, closed.map(i => p.gaps[i]), a.date),
+    signedAt: new Date().toISOString(), signedBy: CV.viewer || "this-device", status: "signed", synthetic: true};
+  CV.saving = true; CV.msg = ""; renderClinician();
+  if (DB && (CV.store === "live" || CV.store === "slow" || CV.store === "loading")) {
+    try { await DB.collection("encounters").doc(a.id).set(enc); ingest(a.id, enc); CV.msg = "Signed and saved to the shared record."; }
+    catch (e) { ingest(a.id, enc); CV.msg = e && e.code === "permission_denied" ? "Signed on this screen. Your access level cannot write to the shared record; ask the owner for edit access." : "Signed on this screen. The shared record could not be written; try again shortly."; }
+  } else { ingest(a.id, enc); CV.msg = "Signed on this screen. Shared saving is not available in this view."; }
+  CV.saving = false; renderClinician();
 }
 
-function visitSummary(h) {
-  const slot = h.slot || {date: D.today, time: "10:00"};
-  const refs = [], recalls = [], done = [], declined = [];
-  for (const m of h.members) {
-    const p = P[m];
-    p.gaps.forEach((g, gi) => {
-      const r = VISIT.results[keyOf(m, gi)]; if (!r) return;
-      if (r.declined) { declined.push(`${p.first}: ${g.i}`); return; }
-      done.push(`${p.first}: ${g.i}${r.value != null && r.value !== "" ? ` · ${r.kind} ${r.value}` : ""}`);
-      if (r.referral) refs.push({who: p.first, what: r.referral.what, by: plusDays(slot.date, r.referral.days)});
-      if (g.r === "CASCADE-FH" || g.r === "CASCADE-HBOC" || g.r === "CASCADE-LYNCH") refs.push({who: p.first, what: "Genetic counselling", by: plusDays(slot.date, 42)});
-      const rc = recallFor(p, g, slot.date); if (rc) recalls.push({who: p.first, ...rc});
-    });
-  }
-  const uniq = (arr, k) => arr.filter((x, i) => arr.findIndex(y => k(y) === k(x)) === i);
-  return {refs, recalls: uniq(recalls, x => x.who + x.what).sort((a, b) => a.date.localeCompare(b.date)), done, declined};
+/* ---------- rendering ---------- */
+function cvField(a, p, fd) {
+  const dr = draftFor(a), v = dr.findings[fd.id], id = `f-${a.id}-${fd.id}`;
+  if (fd.type === "number") return `<label class="cvf"><span>${esc(fd.label)} <span class="muted">(${esc(fd.unit)})</span></span><input type="number" id="${id}" data-f="${fd.id}" min="${fd.min}" max="${fd.max}" step="any" value="${v ?? ""}"></label>`;
+  if (fd.type === "choice") return `<label class="cvf"><span>${esc(fd.label)}</span><select id="${id}" data-f="${fd.id}"><option value="">Not recorded</option>${fd.options.map(o => `<option ${v === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></label>`;
+  return `<label class="cvf cvcheck"><input type="checkbox" id="${id}" data-f="${fd.id}" ${v ? "checked" : ""}><span>${esc(fd.label)}</span></label>`;
 }
 
-function itemControl(p, g, gi) {
-  const k = keyOf(p.id, gi), r = VISIT.results[k];
-  const id = `cv-${p.id}-${gi}`;
-  if (r) {
-    const cls = r.declined ? "c-sys" : r.level === "crit" ? "c-over" : r.level === "warn" ? "c-due" : "c-ok";
-    const lab = r.declined ? "Declined, refusal recorded" : r.value != null && r.value !== "" ? `${r.kind} ${r.value} recorded` : "Done";
-    return `<div style="display:grid;gap:4px"><span class="chip ${cls}">${esc(lab)}</span>${r.outcome ? `<span class="small">${esc(r.outcome)}</span>` : ""}
-      <button class="btn ghost" data-undo="${k}" style="justify-self:start;padding:3px 10px;font-size:.78rem">Undo</button></div>`;
+function renderClinician() {
+  // default sign-in: the treating physician of the first featured family's first physician appointment
+  if (!CV.me) {
+    const f = FEATURED.map(h => (APPT_BY_HH[h.id] || []).find(a => a.role !== "Nurse")).find(Boolean) || D.appointments[0];
+    CV.me = f.clinician; CV.date = f.date; CV.appt = f.id;
   }
-  let input = "";
-  if (MCHAT_RULES.includes(g.r)) input = `<label class="small" style="display:flex;gap:6px;align-items:center">M-CHAT-R score<input type="number" min="0" max="20" id="${id}" style="width:64px" placeholder="0–20"></label>`;
-  else if (HB_RULES.includes(g.r)) input = `<label class="small" style="display:flex;gap:6px;align-items:center">Hb g/dL<input type="number" step="0.1" min="4" max="20" id="${id}" style="width:72px"></label>`;
-  else if (A1C_RULES.includes(g.r)) input = `<label class="small" style="display:flex;gap:6px;align-items:center">HbA1c %<input type="number" step="0.1" min="3" max="18" id="${id}" style="width:72px"></label>`;
-  const kind = MCHAT_RULES.includes(g.r) ? "M-CHAT-R" : HB_RULES.includes(g.r) ? "Hb" : A1C_RULES.includes(g.r) ? "HbA1c" : "";
-  const doneLab = g.r === "WCV-MCHAT-REF" ? "Referral booked" : g.r === "VAX" ? "Vaccines given" : g.r.startsWith("CASCADE") ? "Counselling booked" : g.r === "DEV-PRIORITY" ? "Surveillance done" : kind ? "Record" : "Done";
-  return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${input}
-    <button class="btn" data-rec="${k}" data-kind="${kind}" data-input="${input ? id : ""}" style="padding:5px 12px;font-size:.8rem">${doneLab}</button>
-    <button class="btn ghost" data-dec="${k}" style="padding:5px 12px;font-size:.8rem" title="Parental or personal refusal is documented with a signature, as the WCV standard requires">Declined</button></div>`;
-}
-
-function renderClinic() {
-  const h = HH[VISIT.hh] || HH[currentFamily] || FEATURED[0];
-  VISIT.hh = h.id;
-  const slot = h.slot || {date: D.today, time: "10:00", why: []};
-  const sameDay = D.households.filter(x => x.slot && x.slot.date === slot.date && x.district === h.district).sort((a, b) => a.slot.time.localeCompare(b.slot.time));
-  const dayList = sameDay.map(x => `<button class="app-row" data-cv-hh="${x.id}" aria-current="${x.id === h.id}" style="${x.id === h.id ? "border-color:var(--teal);background:var(--teal-soft)" : ""}">
-      <span class="mono" style="min-width:44px">${esc(x.slot.time.slice(0, 5))}</span><span class="grow"><b>${esc(x.surname)}</b><span class="tiny muted">${x.members.filter(m => visibleGaps(P[m]).length).length} to see · ${esc(x.lang)}</span></span></button>`).join("");
-  const mem = h.members.map(m => P[m]).filter(p => p.gaps.length);
-  const cards = mem.map(p => {
-    const c = C(p.id), lv = live(p);
-    const rows = p.gaps.map((g, gi) => ({g, gi})).filter(({g}) => gapVisible(p, g) && g.s !== "system");
-    const items = rows.map(({g, gi}) => {
-      const mt = D.gap_meta[g.r] || {};
-      return `<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:12px;padding:10px 0;border-top:1px solid var(--line)">
-        <div style="display:grid;gap:3px"><span>${chip(g.s)} ${esc(g.i)}</span><span class="tiny muted">${esc(mt.source || "")}${mt.followup ? " · " + esc(mt.followup) : ""}</span></div>
-        ${itemControl(p, g, gi)}</div>`;
-    }).join("");
-    const pg = p.gaps.some(g => g.r === "PATHWAY-GAP");
-    const consentLine = CONSENT_KEYS.map(k => `<span class="chip ${c[k] ? "c-ok" : "c-sys"}" title="${CONSENT_LABEL[k]}">${CONSENT_LABEL[k]}${c[k] ? "" : ": no"}</span>`).join(" ");
-    return `<div class="panel" style="display:grid;gap:8px"><div class="mhead"><div><span class="nm">${esc(nameOf(p))}</span><span class="small muted"> · ${ROLE[p.role]}, ${ageTxt(p.age)}</span></div>${confB(lv.confidence)}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${consentLine}</div>
-      ${p.score ? `<p class="small"><span class="muted">${p.score.model === "adult" ? "3-year cardiometabolic risk" : "Developmental concern risk"}:</span> <b class="num">${pct(lv.risk, 1)}</b> <span class="muted num">(${lv.rr.toFixed(1)}× average; ${lv.factors.slice(0, 2).map(f => f[0]).join(", ")})</span></p>` : ""}
-      ${items || (pg ? `<p class="small">No funded comprehensive screening pathway: offer the community health check (blood pressure, blood glucose) available at this site.</p>` : `<p class="small muted">Nothing open for this visit.</p>`)}</div>`;
+  const me = CLIN[CV.me], myClinic = LOCS[me.clinic];
+  const mine = D.appointments.filter(a => a.clinician === CV.me).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+  const dates = [...new Set(mine.map(a => a.date))];
+  if (!dates.includes(CV.date)) CV.date = dates[0];
+  const today = mine.filter(a => a.date === CV.date);
+  if (!today.some(a => a.id === CV.appt)) CV.appt = today[0] && today[0].id;
+  const a = APPT[CV.appt];
+  const byClinic = D.clinics.map(c => `<optgroup label="${esc(c.name)}">${c.staff.map(s => `<option value="${s}" ${s === CV.me ? "selected" : ""}>${esc(CLIN[s].name)} · ${esc(CLIN[s].role)}</option>`).join("")}</optgroup>`).join("");
+  const storeLine = {live: "Signed encounters are saved to the shared record and visible to the care team.", loading: "Connecting to the shared record…",
+    slow: "The shared record is slow to answer; signed encounters may not be saved yet.", error: "The shared record cannot be reached; signing keeps the encounter on this screen only.",
+    local: "Shared saving is not available in this view; signed encounters stay on this screen.", pending: "Connecting to the shared record…"}[CV.store];
+  const sched = today.map(x => {
+    const p = P[x.pid], enc = ENCOUNTERS[x.id];
+    return `<button class="app-row" data-cv-appt="${x.id}" style="${x.id === CV.appt ? "border-color:var(--teal);background:var(--teal-soft)" : ""}">
+      <span class="mono" style="min-width:44px">${esc(x.start)}</span><span class="grow"><b>${esc(nameOf(p))}</b><span class="tiny muted">${ageTxt(p.age)} · ${x.purposes.map(k => PURP[k].label).join(", ")}</span></span>
+      ${enc ? `<span class="chip c-ok">Signed</span>` : x.continuity ? "" : `<span class="chip c-sys" title="Covering for the treating physician">Cover</span>`}</button>`;
   }).join("");
-  const sm = visitSummary(h);
-  const anyResult = Object.keys(VISIT.results).some(k => h.members.includes(k.split("|")[0]));
-  const famMsg = `Thank you for coming today. ${sm.refs.length ? `Your care team has booked ${sm.refs.length} follow-up appointment${sm.refs.length > 1 ? "s" : ""}; you can see the dates in S.C.O.P.E Family.` : "No follow-up appointment is needed."} ${sm.recalls.length ? `We will remind you before the next check on ${dateY(sm.recalls[0].date)}.` : ""}`;
   $("#v-clinic").innerHTML = `
-  <div class="fam-head"><div style="display:grid;gap:6px"><span class="eyebrow">Clinic visit · ${esc(h.district)} Healthcare Centre · ${esc(dateTxt(slot.date))}</span>
-      <h2>The ${esc(h.surname)} household, ${esc(slot.time)}</h2>
-      <p class="lede">One visit for the whole family. Record results as you go; S.C.O.P.E applies the standard's thresholds, books follow-up within its timelines and sets the next recall. The clinician decides.</p></div></div>
-  <div style="display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:18px;align-items:start" class="cv-grid">
-    <div style="display:grid;gap:8px;align-content:start"><span class="eyebrow">Today at this centre</span>${dayList || `<p class="small muted">No other bookings.</p>`}</div>
-    <div style="display:grid;gap:14px">${cards}
-      <div class="panel" style="display:grid;gap:10px"><h3>Visit summary</h3>
-        ${anyResult ? `
-        <div class="grid2" style="gap:14px">
-          <div><span class="eyebrow">Follow-up booked</span>${sm.refs.length ? `<ul class="rules">${sm.refs.map(r => `<li><b>${esc(r.who)}</b>: ${esc(r.what)}, by ${esc(dateY(r.by))}</li>`).join("")}</ul>` : `<p class="small muted">None.</p>`}</div>
-          <div><span class="eyebrow">Next recalls</span>${sm.recalls.length ? `<ul class="rules">${sm.recalls.map(r => `<li><b>${esc(r.who)}</b>: ${esc(r.what)}, ${esc(dateY(r.date))}</li>`).join("")}</ul>` : `<p class="small muted">None yet.</p>`}</div></div>
-        ${sm.declined.length ? `<p class="small"><span class="muted">Declined and documented:</span> ${esc(sm.declined.join("; "))}</p>` : ""}
-        <div class="app-card"><span class="eyebrow">Message to the family (in the app, not WhatsApp)</span><span class="small">${esc(famMsg)}</span></div>
-        <div class="sync">Closed items have left the outreach worklist and the family's app. ${sm.done.length} recorded, ${sm.declined.length} declined.</div>` :
-        `<p class="small muted">Record the first result to see referrals, recalls and the family message.</p>`}</div>
-      <p class="disclaimer">Decision support only. Thresholds follow the DoH Well-Child Visit standard (M-CHAT-R, haemoglobin) and standard HbA1c cut-offs; the treating clinician confirms every diagnosis and referral.</p>
-    </div></div>`;
-  document.querySelectorAll("#v-clinic [data-cv-hh]").forEach(b => b.onclick = () => { VISIT.hh = b.dataset.cvHh; currentFamily = b.dataset.cvHh; renderClinic(); });
-  document.querySelectorAll("#v-clinic [data-rec]").forEach(b => b.onclick = () => {
-    const [pid, gi] = b.dataset.rec.split("|"), p = P[pid], g = p.gaps[+gi];
-    const inp = b.dataset.input ? $("#" + b.dataset.input) : null;
-    if (inp && inp.value === "") { inp.focus(); inp.setAttribute("aria-invalid", "true"); return; }
-    const value = inp ? inp.value : null;
-    let dec = inp ? decide(p, g, value) : null;
-    if (g.r === "WCV-MCHAT-REF") { const sc = +((g.i.match(/score (\d+)/) || [0, 3])[1]); dec = {level: sc >= 8 ? "crit" : "warn", text: `Referral booked to neurodevelopment clinic and speech therapy, ${sc >= 8 ? "within 2 weeks" : "within 4 weeks"} as the WCV standard sets.`, referral: {what: "Neurodevelopment clinic + speech therapy" + (sc >= 8 ? " (urgent)" : ""), days: sc >= 8 ? 14 : 28}}; }
-    VISIT.results[b.dataset.rec] = {kind: b.dataset.kind, value, outcome: dec ? dec.text : "", level: dec ? dec.level : "ok", referral: dec ? dec.referral : null};
-    CLOSED.add(b.dataset.rec);
-    const y = scrollY; renderClinic(); scrollTo(0, y);
-  });
-  document.querySelectorAll("#v-clinic [data-dec]").forEach(b => b.onclick = () => {
-    VISIT.results[b.dataset.dec] = {declined: true, outcome: "Refusal documented with signature on the facility form."}; CLOSED.add(b.dataset.dec);
-    const y = scrollY; renderClinic(); scrollTo(0, y);
-  });
-  document.querySelectorAll("#v-clinic [data-undo]").forEach(b => b.onclick = () => {
-    delete VISIT.results[b.dataset.undo]; CLOSED.delete(b.dataset.undo); const y = scrollY; renderClinic(); scrollTo(0, y);
-  });
+  <div class="fam-head"><div style="display:grid;gap:6px"><span class="eyebrow">Clinician workspace · ${esc(myClinic.name)}</span>
+      <h2>${esc(me.name)}, ${esc(me.role.toLowerCase())}</h2>
+      <p class="small muted">Signed in through the DoH identity provider (simulated). Speaks ${esc(me.languages.join(", "))}.</p></div>
+    <label class="small muted" style="display:grid;gap:3px">Sign in as another clinician<select id="cv-me">${byClinic}</select></label></div>
+  <p class="sync" style="background:var(--surface-2);color:var(--ink-2)">${esc(storeLine)}</p>
+  <div class="cv-grid" style="display:grid;grid-template-columns:minmax(0,280px) minmax(0,1fr);gap:18px;align-items:start">
+    <div style="display:grid;gap:8px;align-content:start">
+      <label class="small muted" style="display:grid;gap:3px">My Family Health Day sessions<select id="cv-date">${dates.map(d => `<option value="${d}" ${d === CV.date ? "selected" : ""}>${esc(dateTxt(d))} · ${mine.filter(x => x.date === d).length} patients</option>`).join("")}</select></label>
+      ${sched || `<p class="small muted">No bookings.</p>`}
+      <p class="tiny muted">${mine.length} S.C.O.P.E bookings for you in the next 12 weeks · ${mine.filter(x => x.continuity).length} as treating physician</p></div>
+    <div style="display:grid;gap:14px">${a ? encounterView(a) : `<div class="panel"><p class="muted">Pick an appointment.</p></div>`}</div></div>`;
+  $("#cv-me").onchange = e => { CV.me = e.target.value; CV.date = null; CV.appt = null; CV.msg = ""; renderClinician(); };
+  $("#cv-date").onchange = e => { CV.date = e.target.value; CV.appt = null; CV.msg = ""; renderClinician(); };
+  document.querySelectorAll("#v-clinic [data-cv-appt]").forEach(b => b.onclick = () => { CV.appt = b.dataset.cvAppt; CV.msg = ""; renderClinician(); });
+  if (a) wireEncounter(a);
+}
+
+function encounterView(a) {
+  const p = P[a.pid], h = HH[a.hh], c = C(p.id), lv = live(p), enc = ENCOUNTERS[a.id], dr = draftFor(a);
+  const tp = CLIN[p.tp], loc = LOCS[a.clinic];
+  const family = (APPT_BY_HH[a.hh] || []).filter(x => x.id !== a.id).map(x => `${esc(P[x.pid].first)} ${esc(x.start)} with ${esc(CLIN[x.clinician].name)}`).join(" · ");
+  const gapsByP = k => p.gaps.map((g, i) => ({g, i})).filter(({g}) => RP[g.r] === k && gapVisible(p, g));
+  const why = a.purposes.map(k => `<div style="display:grid;gap:4px;padding:10px 0;border-top:1px solid var(--line)"><b>${esc(PURP[k].label)}</b><span class="small muted">${esc(PURP[k].why)}</span>
+      <ul class="rules">${gapsByP(k).map(({g}) => `<li>${chip(g.s)} ${esc(g.i)}</li>`).join("")}</ul></div>`).join("");
+  const risk = p.score ? `<p class="small"><span class="muted">${p.score.model === "adult" ? "3-year cardiometabolic risk" : "Developmental concern risk"}:</span> <b class="num">${pct(lv.risk, 1)}</b> <span class="muted num">(${lv.rr.toFixed(1)}× average · confidence ${esc(lv.confidence)})</span><br><span class="muted">Main factors:</span> ${lv.factors.map(f => `${esc(f[0])} ${f[1] > 0 ? "↑" : "↓"}`).join(", ") || "none"}</p>` : "";
+  const header = `<div class="panel" style="display:grid;gap:8px">
+    <div class="mhead"><div><span class="nm">${esc(nameOf(p))}</span><span class="small muted"> · ${ROLE[p.role]}, ${ageTxt(p.age)}, ${p.sex === "F" ? "female" : "male"}</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${a.continuity ? `<span class="chip c-ok">You are the treating physician</span>` : `<span class="chip c-sys">Covering for ${esc(tp.name)}</span>`}${a.interpreter ? `<span class="chip c-due">Interpreter: ${esc(h.lang)}</span>` : ""}</div></div>
+    <p class="small">${esc(dateTxt(a.date))}, ${esc(a.start)}–${esc(a.end)} · ${esc(loc.name)} · ${a.minutes} min${family ? ` · <span class="muted">Same session: ${family}</span>` : ""}</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${CONSENT_KEYS.map(k => `<span class="chip ${c[k] ? "c-ok" : "c-sys"}">${CONSENT_LABEL[k]}${c[k] ? "" : ": no"}</span>`).join("")}</div></div>`;
+  if (enc) {
+    return header + `<div class="panel" style="display:grid;gap:10px"><div class="mhead"><h3>Signed encounter</h3><span class="chip c-ok">Signed ${esc(new Date(enc.signedAt).toLocaleString("en-GB", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}))}</span></div>
+      <dl class="kv">
+        ${enc.purposes.map(k => `<dt>${esc(PURP[k].label)}</dt><dd>${esc(enc.conclusions[k] || "–")}</dd>`).join("")}
+        <dt>Findings</dt><dd>${Object.entries(enc.findings).filter(([, v]) => v !== "" && v !== false).map(([k, v]) => { const fd = enc.purposes.flatMap(x => PROTOCOL[x] || []).find(q => q.id === k); return `${esc(fd ? fd.label : k)}: ${esc(v === true ? "done" : v)}${fd && fd.type === "number" ? " " + esc(fd.unit.includes("–") ? "" : fd.unit) : ""}`; }).join(" · ") || "–"}</dd>
+        <dt>ICD-10-CM</dt><dd>${enc.icd.map(x => `<span class="mono">${esc(x)}</span> ${esc(ICD[x] || "")}`).join("; ") || "–"}</dd>
+        <dt>Orders</dt><dd>${esc([...enc.labs, ...enc.vaccines.map(v => "Given: " + v)].join("; ") || "–")}</dd>
+        <dt>Referrals</dt><dd>${enc.referrals.map(r => `${esc(r.to)} by ${esc(dateY(r.by))}`).join("; ") || "–"}</dd>
+        <dt>Counselling</dt><dd>${esc(enc.counselling.join("; ") || "–")}</dd>
+        <dt>Next recalls</dt><dd>${(enc.recalls || []).map(r => `${esc(r.what)}, ${esc(dateY(r.date))}`).join("; ") || "–"}</dd>
+        <dt>Note</dt><dd>${esc(enc.note || "–")}</dd></dl>
+      <p class="tiny muted">Closed ${enc.closed.length} open item${enc.closed.length === 1 ? "" : "s"}; they have left the outreach worklist and the family's app.</p>
+      ${CV.msg ? `<div class="sync">${esc(CV.msg)}</div>` : ""}
+      <button class="btn ghost" id="cv-amend" style="justify-self:start">Amend this encounter</button></div>`;
+  }
+  const sugg = suggest(p, a.purposes, dr.findings);
+  const allIcd = [...new Set([...sugg.flatMap(s => s.icd), ...dr.icd])];
+  const dueVax = gapsByP("IMM").map(({g}) => g.i);
+  const protocol = a.purposes.map(k => {
+    const fields = (PROTOCOL[k] || []).filter(fd => !fd.when || fd.when(p));
+    const vax = k === "IMM" ? dueVax.map((v, i) => `<label class="cvf cvcheck"><input type="checkbox" data-vax="${esc(v)}" id="vx-${a.id}-${i}" ${dr.vaccines.includes(v) ? "checked" : ""}><span>Given: ${esc(v)}</span></label>`).join("") : "";
+    const outs = OUTCOMES[k] || OUTCOMES._;
+    return `<fieldset class="cvset"><legend>${esc(PURP[k].label)}</legend><div class="cvfields">${fields.map(fd => cvField(a, p, fd)).join("")}${vax}</div>
+      <label class="cvf"><span><b>Conclusion</b></span><select data-concl="${k}" id="cc-${a.id}-${k}"><option value="">Choose…</option>${outs.map(o => `<option ${dr.conclusions[k] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></label></fieldset>`;
+  }).join("");
+  const sugList = sugg.length ? sugg.map((s, i) => `<div class="alert ${s.level === "crit" ? "open" : s.level === "warn" ? "open" : s.level === "ok" ? "resolved" : "watch"}"><b>${{crit: "Urgent", warn: "Action", ok: "Normal", info: "Note"}[s.level]}</b><span>${esc(s.text)}${(s.acts.ref || s.acts.lab || s.acts.counsel) ? ` <button class="btn ghost" data-sug="${i}" style="padding:2px 9px;font-size:.75rem;margin-left:6px">Add to orders</button>` : ""}</span></div>`).join("") : `<p class="small muted">Enter findings to see guideline-based suggestions.</p>`;
+  const chk = (list, arr, attr) => list.map((x, i) => `<label class="cvf cvcheck"><input type="checkbox" data-${attr}="${esc(x)}" id="${attr}-${a.id}-${i}" ${arr.includes(x) ? "checked" : ""}><span>${esc(x)}</span></label>`).join("");
+  return header + `
+  <div class="panel"><h3>Why this visit</h3>${why}${risk}<p class="disclaimer">Predicted need set the purpose of this visit. The findings below and your conclusions decide what happens next.</p></div>
+  <div class="panel" style="display:grid;gap:12px"><h3>Examination protocol</h3>${protocol}</div>
+  <div class="panel" style="display:grid;gap:8px"><h3>Decision support</h3>${sugList}<p class="tiny muted">DoH Well-Child Visit thresholds (M-CHAT-R, haemoglobin, hearing timelines) and standard blood pressure, HbA1c, LDL and glucose cut-offs. You decide.</p></div>
+  <div class="panel" style="display:grid;gap:12px"><h3>Orders and acts</h3>
+    <div><span class="eyebrow">Laboratory</span><div class="cvfields">${chk(LABS, dr.labs, "lab")}</div></div>
+    <div><span class="eyebrow">Referrals</span>${dr.refs.length ? `<ul class="rules">${dr.refs.map((r, i) => `<li>${esc(r.to)}, by <input type="date" id="rb-${a.id}-${i}" data-refdate="${i}" value="${r.by}" style="font-size:.85rem"> <button class="btn ghost" data-refdel="${i}" style="padding:1px 8px;font-size:.72rem">Remove</button></li>`).join("")}</ul>` : `<p class="small muted">None yet.</p>`}
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><select id="cv-refnew"><option value="">Add a referral…</option>${REFERRALS.map(r => `<option>${esc(r)}</option>`).join("")}</select></div></div>
+    <div><span class="eyebrow">Counselling</span><div class="cvfields">${chk(COUNSEL, dr.counsel, "cou")}</div></div></div>
+  <div class="panel" style="display:grid;gap:10px"><h3>Diagnosis codes and note</h3>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${allIcd.map(x => `<button class="tog" data-icd="${x}" aria-pressed="${dr.icd.includes(x)}" style="${dr.icd.includes(x) ? "border-color:var(--teal);background:var(--teal-soft)" : ""}"><span class="mono">${x}</span> ${esc(ICD[x] || "")}</button>`).join("") || `<span class="small muted">Codes appear as findings are entered.</span>`}</div>
+    <label class="cvf"><span>Clinical note</span><textarea id="cv-note-${a.id}" rows="3" maxlength="4000" style="width:100%;font:inherit;border:1px solid var(--line);border-radius:7px;padding:8px;background:var(--surface);color:var(--ink)">${esc(dr.note)}</textarea></label>
+    ${CV.msg ? `<div class="alert open"><b>Check</b><span>${esc(CV.msg)}</span></div>` : ""}
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn" id="cv-sign" ${CV.saving ? "disabled" : ""}>${CV.saving ? "Saving…" : "Sign and save encounter"}</button>
+      <span class="tiny muted">Signing closes the ${a.purposes.map(k => PURP[k].label.toLowerCase()).join(" and ")} items, books the referrals and sets the next recalls.</span></div></div>`;
+}
+
+function wireEncounter(a) {
+  const p = P[a.pid], dr = draftFor(a);
+  const rerender = () => { const y = scrollY; renderClinician(); scrollTo(0, y); };
+  const am = $("#cv-amend"); if (am) { am.onclick = () => { const e = ENCOUNTERS[a.id]; Object.assign(dr, {findings: {...e.findings}, labs: [...e.labs], refs: e.referrals.map(r => ({...r})), counsel: [...e.counselling], vaccines: [...e.vaccines], conclusions: {...e.conclusions}, icd: [...e.icd], note: e.note}); encGaps(e).forEach(k => CLOSED.delete(k)); delete ENCOUNTERS[a.id]; CV.msg = ""; rerender(); }; return; }
+  document.querySelectorAll("#v-clinic [data-f]").forEach(el => el.onchange = () => { dr.findings[el.dataset.f] = el.type === "checkbox" ? el.checked : el.value; rerender(); });
+  document.querySelectorAll("#v-clinic [data-concl]").forEach(el => el.onchange = () => { dr.conclusions[el.dataset.concl] = el.value; CV.msg = ""; rerender(); });
+  document.querySelectorAll("#v-clinic [data-vax]").forEach(el => el.onchange = () => { const v = el.dataset.vax; dr.vaccines = el.checked ? [...dr.vaccines, v] : dr.vaccines.filter(x => x !== v); });
+  const tog = (attr, key) => document.querySelectorAll(`#v-clinic [data-${attr}]`).forEach(el => el.onchange = () => { const v = el.dataset[attr]; dr[key] = el.checked ? [...dr[key], v] : dr[key].filter(x => x !== v); });
+  tog("lab", "labs"); tog("cou", "counsel");
+  document.querySelectorAll("#v-clinic [data-sug]").forEach(el => el.onclick = () => { const s = suggest(p, a.purposes, dr.findings)[+el.dataset.sug]; applyActs(dr, s.acts, a.date); s.icd.forEach(x => { if (!dr.icd.includes(x)) dr.icd.push(x); }); rerender(); });
+  document.querySelectorAll("#v-clinic [data-icd]").forEach(el => el.onclick = () => { const x = el.dataset.icd; dr.icd = dr.icd.includes(x) ? dr.icd.filter(y => y !== x) : [...dr.icd, x]; rerender(); });
+  document.querySelectorAll("#v-clinic [data-refdel]").forEach(el => el.onclick = () => { dr.refs.splice(+el.dataset.refdel, 1); rerender(); });
+  document.querySelectorAll("#v-clinic [data-refdate]").forEach(el => el.onchange = () => { dr.refs[+el.dataset.refdate].by = el.value; });
+  const rn = $("#cv-refnew"); if (rn) rn.onchange = () => { if (rn.value && !dr.refs.some(r => r.to === rn.value)) dr.refs.push({to: rn.value, by: plusDays(a.date, 28)}); rerender(); };
+  const note = $(`#cv-note-${a.id}`); if (note) note.oninput = () => { dr.note = note.value; };
+  $("#cv-sign").onclick = () => signEncounter(a);
 }
 
 /* ================= SAFEGUARDS ================= */
@@ -1240,6 +1432,11 @@ function renderSafeguards() {
 }
 
 /* ================= OUTCOMES ================= */
+function interpRows() {
+  const c = {};
+  D.appointments.forEach(a => { const l = HH[a.hh].lang; c[l] = c[l] || [0, 0]; c[l][0]++; if (a.interpreter) c[l][1]++; });
+  return Object.entries(c).sort((x, y) => y[1][1] / y[1][0] - x[1][1] / x[1][0]).map(([l, [n, k]]) => `<tr><td>${esc(l)}</td><td class="r num">${n < D.small_cell ? "&lt;" + D.small_cell : fmt(n)}</td><td class="r num">${n < D.small_cell ? "suppressed" : pct(k / n)}</td></tr>`).join("");
+}
 function renderOutcomes() {
   const strat = [["baseline_age_sex_rules", "Current age/sex rules", "Everyone due by age is equally likely to be contacted; generic SMS in Arabic or English."],
     ["bayt_prioritisation_only", "S.C.O.P.E ranking only", "Households ranked by need and risk; standard messages."],
@@ -1272,6 +1469,8 @@ function renderOutcomes() {
       <li><b>Recall and follow-up:</b> share of positive M-CHAT-R referred and seen; cascade relatives counselled within 90 days.</li>
       <li><b>Model quality:</b> calibration slope and ratio per segment each cycle; AUC on realised outcomes.</li>
       <li><b>Downstream value:</b> earlier diagnoses (developmental, diabetes, familial hypercholesterolaemia), visits saved through bundling, cost per completed preventive action.</li></ul></div>
+    <div class="panel"><h3>Workforce: where interpreters are needed</h3><p class="small muted" style="margin-bottom:8px">Share of booked visits where no clinician on the session speaks the family's language. This guides interpreter rotas and recruitment.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Family language</th><th class="r">Visits booked</th><th class="r">Interpreter needed</th></tr></thead><tbody>${interpRows()}</tbody></table></div></div>
     <div class="panel"><h3>Community view: where to send mobile clinics</h3><p class="small muted" style="margin-bottom:8px">Districts ranked by share of residents with an open item. Cells under ${D.small_cell} are suppressed.</p>
       <div class="tbl-wrap"><table><thead><tr><th>District</th><th class="r">People</th><th class="r">With open item</th><th class="r">In shared housing</th><th class="r">No funded pathway</th><th class="r">Children overdue</th></tr></thead><tbody>${comm}</tbody></table></div></div>
   </div>`;
@@ -1347,7 +1546,7 @@ function renderGovernance() {
 }
 
 /* ================= ROUTER ================= */
-const VIEWS = {home: renderHome, overview: renderOverview, worklist: renderWorklist, family: renderFamily, familyapp: renderFamilyApp, clinic: renderClinic, safeguards: renderSafeguards, outcomes: renderOutcomes, governance: renderGovernance};
+const VIEWS = {home: renderHome, overview: renderOverview, worklist: renderWorklist, family: renderFamily, familyapp: renderFamilyApp, clinic: renderClinician, safeguards: renderSafeguards, outcomes: renderOutcomes, governance: renderGovernance};
 function route() {
   let h = (location.hash || "#home").slice(1);
   if (h === "family-app") h = "familyapp";

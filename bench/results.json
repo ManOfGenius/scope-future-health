@@ -1,9 +1,9 @@
 {
- "vectorised_scoring_1000000": 0.018,
- "vectorised_scoring_3800000": 0.065,
- "live_eval_us_per_person": 9.3,
+ "vectorised_scoring_1000000": 0.025,
+ "vectorised_scoring_3800000": 0.067,
+ "live_eval_us_per_person": 9.8,
  "live_eval_3_8M_minutes_one_core": 0.6,
  "live_eval_3_8M_minutes_16_cores": 0.04,
- "family_plan_ms_p50": 0.19,
- "family_plan_ms_p95": 0.3
+ "family_plan_ms_p50": 0.26,
+ "family_plan_ms_p95": 0.39
 }

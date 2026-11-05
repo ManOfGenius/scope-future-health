@@ -16,6 +16,9 @@ Submitted to the **Future Health Digital Innovation Challenge 2026 · Population
 | Calibrated risk | Explainable logistic models (adult cardiometabolic 3-year; child developmental concern), 30 bootstrap refits for intervals, shrinkage recalibration per segment | `engine/engine.py` |
 | Family graph | Bundles a household into one visit; index-mediated genetic cascade (FH, HBOC, Lynch) that never discloses a relative's result | `engine/engine.py` |
 | Equity guard | Language-by-nationality equity floor; small-cell suppression (n < 11); calibration alerts with exact Poisson intervals | `engine/engine.py` |
+| Scheduling | Several clinics per district, clinicians with roles, languages, sessions and capacity; a treating physician per person; one session per household; cover only when capacity forces it; interpreter flagged | `engine/engine.py` |
+| Visit purposes | Each open item maps to a predictive purpose (development, anaemia, cardiometabolic, cancer, genetic cascade, immunisation, school check, community check) that sets the clinician role, the slot length and the examination protocol | `engine/guidelines.py` |
+| Clinician workspace | Personal schedule, protocol by purpose, guideline decision support, orders, referrals with due dates, ICD-10-CM codes, signed encounters saved to a shared record | `web/app.html` |
 | Engagement | Channel, addressee and timing per household (school, shift work, Ramadan); seven-language invitations with no health detail | `web/app.html` |
 | Interoperability | FHIR R4 API with roles, purpose-of-use and a full audit trail | `api/` |
 
@@ -38,13 +41,16 @@ Open `web/dist/scope.html` in a browser for the console and the family app.
 | GET | `/fhir/Patient/{id}` | Patient |
 | GET | `/fhir/Patient/{id}/$care-gaps` | Bundle: DetectedIssue, ImmunizationRecommendation, RiskAssessment |
 | GET | `/fhir/Group/{hh}/$family-plan` | Bundle: Group, Task, CommunicationRequest, RelatedPerson, DetectedIssue, ImmunizationRecommendation |
+| GET | `/fhir/Appointment?patient={id}` | Appointments with Practitioner and Location |
+| GET | `/fhir/Practitioner/{id}` · `/fhir/Location/{id}` | Clinician (with PractitionerRole) · clinic |
+| POST | `/fhir/Appointment/{id}/$sign-encounter` | Encounter, Observation (LOINC), Condition (ICD-10-CM), ServiceRequest, Immunization, Procedure, ClinicalImpression; closes the visit's open items |
 | GET | `/fhir/Consent?patient={id}` | Consent per data category |
 | PUT | `/fhir/Consent/{id}-{category}` | Updated Consent + recomputed risk, confidence, priority and affected relatives |
 | GET | `/fhir/AuditEvent` | Audit trail (auditor role only) |
 | GET | `/api/worklist` | Ranked households (operational) |
 | GET | `/api/audit?dim=` | Small-cell-suppressed equity audit |
 
-Every call needs `Authorization: Bearer <token>` and `X-Purpose-Of-Use` (HL7 v3 ActReason). Demo tokens: `clinician-demo` (TREAT, CAREMGT), `coordinator-demo` (CAREMGT, PATADMIN), `analyst-demo` (PUBHLTH, HOPERAT, aggregates only), `auditor-demo` (HOPERAT), `family-<PersonId>` (PATRQT, own household; may change own and own minors' consent). Production replaces tokens with UAE PASS / DoH identity provider and SMART-on-FHIR scopes.
+Every call needs `Authorization: Bearer <token>` and `X-Purpose-Of-Use` (HL7 v3 ActReason). Demo tokens: `practitioner-<ClinicianId>` (TREAT; may sign only their own or a same-role colleague's appointment at the same clinic), `clinician-demo` (TREAT, CAREMGT), `coordinator-demo` (CAREMGT, PATADMIN), `analyst-demo` (PUBHLTH, HOPERAT, aggregates only), `auditor-demo` (HOPERAT), `family-<PersonId>` (PATRQT, own household; may change own and own minors' consent). Production replaces tokens with UAE PASS / DoH identity provider and SMART-on-FHIR scopes.
 
 ```bash
 curl -H "Authorization: Bearer clinician-demo" -H "X-Purpose-Of-Use: TREAT" \
@@ -65,7 +71,7 @@ Outcome simulation (600 people contacted per 90-day cycle, 200 cycles): S.C.O.P.
 
 ## Tests
 
-`make test` runs 24 tests covering guideline windows, sex-specific rules, immunisation schedule conformance, Thiqa eligibility, genomic ethics for minors, consent-gated cascade, small-cell suppression, invitations free of condition names, role and purpose-of-use enforcement, consent recomputation, revoked invitations after opt-out, and audit of refusals.
+`make test` runs 37 tests covering clinic and clinician assignment, session timing, capacity, treating-physician continuity, Ramadan and shift-work rules, encounter signing rights and FHIR output, guideline windows, sex-specific rules, immunisation schedule conformance, Thiqa eligibility, genomic ethics for minors, consent-gated cascade, small-cell suppression, invitations free of condition names, role and purpose-of-use enforcement, consent recomputation, revoked invitations after opt-out, and audit of refusals.
 
 ## Scalability (single laptop core)
 

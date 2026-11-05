@@ -35,6 +35,11 @@ class Store:
         self.consent = {pid: dict(zip(CONSENT_KEYS, map(bool, p["consent"]))) for pid, p in self.people.items()}
         self._lock = threading.Lock()
         self.audit: list[dict] = []
+        self.appointments = {a["id"]: a for a in self.D.get("appointments", [])}
+        self.clinicians = {x["id"]: x for x in self.D.get("clinicians", [])}
+        self.clinics = {x["id"]: x for x in self.D.get("clinics", [])}
+        self.encounters: dict[str, dict] = {}
+        self.closed: set[tuple[str, int]] = set()
 
     # ------------------------------------------------------------ consent
     def set_consent(self, pid: str, key: str, value: bool) -> None:
@@ -57,7 +62,24 @@ class Store:
         return True
 
     def visible_gaps(self, pid: str) -> list[dict]:
-        return [g for g in self.people[pid]["gaps"] if self.gap_visible(pid, g)]
+        return [g for i, g in enumerate(self.people[pid]["gaps"]) if self.gap_visible(pid, g) and (pid, i) not in self.closed]
+
+    def may_sign(self, practitioner: str, appt: dict) -> bool:
+        """The booked clinician, or a colleague with the same role at the same clinic (cover)."""
+        if practitioner == appt["clinician"]:
+            return True
+        me, booked = self.clinicians.get(practitioner), self.clinicians[appt["clinician"]]
+        return bool(me and me["clinic"] == booked["clinic"] and me["role"] == booked["role"])
+
+    def record_encounter(self, appt_id: str, enc: dict) -> list[int]:
+        a = self.appointments[appt_id]
+        p = self.people[a["pid"]]
+        rp = self.D["rule_purpose"]
+        closed = [i for i, g in enumerate(p["gaps"]) if rp.get(g["r"]) in a["purposes"] and self.gap_visible(a["pid"], g)]
+        with self._lock:
+            self.encounters[appt_id] = {**enc, "appt": appt_id, "pid": a["pid"], "closed": closed}
+            self.closed.update((a["pid"], i) for i in closed)
+        return closed
 
     # ------------------------------------------------------------ risk
     def live(self, pid: str) -> dict:

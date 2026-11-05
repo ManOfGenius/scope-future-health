@@ -444,8 +444,6 @@ for hh in D["households"]:
                    "contact": cp, "audience": aud, "channel": channel(hh, cp),
                    "slot": None})
 hh_out.sort(key=lambda h: -h["priority"])
-for h in hh_out:
-    if h["n_gaps"] and h["priority"] > 0: h["slot"] = plan_slot(H[h["id"]], h["members"])
 for i, h in enumerate(hh_out): h["rank"] = i + 1
 
 # =========================================================== 6. OUTCOME SIMULATION (Monte Carlo)
@@ -548,6 +546,167 @@ SIM = {"capacity": CAPACITY, "effects": EFFECTS,
 for k in ("baseline_age_sex_rules", "bayt_prioritisation_only", "bayt_full_no_equity_floor", "bayt_full", "bayt_full_half_effects"):
     s = SIM[k]; print(k, {m: s[m]["mean"] for m in s})
 
+# =========================================================== 6b. CLINICS, CLINICIANS, TREATING PHYSICIANS, APPOINTMENTS
+srng = np.random.default_rng(42)
+CLIN_NAMES = {
+    "Arab": (["Ahmed", "Khalid", "Omar", "Yousef", "Hamad", "Saeed"], ["Fatima", "Maryam", "Noura", "Hessa", "Aisha", "Reem"], ["Al Hashemi", "Al Ali", "Haddad", "Al Suwaidi", "Nasser", "Al Zaabi"], ["Arabic", "English"]),
+    "Urdu": (["Imran", "Bilal", "Kamran"], ["Sana", "Hira", "Saima"], ["Qureshi", "Siddiqui", "Malik"], ["Urdu", "Hindi", "English"]),
+    "Malayalam": (["Anil", "Thomas", "Arun"], ["Lakshmi", "Mary", "Sneha"], ["Nair", "Varghese", "Menon"], ["Malayalam", "English"]),
+    "Hindi": (["Rahul", "Vikram", "Sanjay"], ["Priya", "Kavya", "Neha"], ["Sharma", "Gupta", "Joshi"], ["Hindi", "Urdu", "English"]),
+    "Tagalog": (["Mark", "Carlo"], ["Grace", "Angelica", "Joy"], ["Santos", "Reyes", "Cruz"], ["Tagalog", "English"]),
+    "Bengali": (["Rafiq", "Tanvir"], ["Nasrin", "Farzana", "Sumaiya"], ["Rahman", "Hossain", "Chowdhury"], ["Bengali", "English"]),
+    "Western": (["James", "Daniel"], ["Claire", "Emma"], ["Brown", "Martin"], ["English"]),
+}
+CLIN_MIX = {"Family physician": [("Arab", .55), ("Urdu", .15), ("Hindi", .1), ("Malayalam", .1), ("Western", .1)],
+            "Paediatrician": [("Arab", .55), ("Urdu", .15), ("Hindi", .1), ("Malayalam", .1), ("Western", .1)],
+            "Nurse": [("Malayalam", .3), ("Tagalog", .3), ("Arab", .2), ("Hindi", .1), ("Bengali", .1)]}
+def pick_w(pairs):
+    keys = [k for k, _ in pairs]; w = np.array([v for _, v in pairs]); return keys[srng.choice(len(keys), p=w / w.sum())]
+
+def hm(s): h, m = s.split(":"); return int(h) * 60 + int(m)
+def fmt_hm(x): return f"{x // 60:02d}:{x % 60:02d}"
+
+district_pop = collections.Counter(H[p["hh"]]["district"] for p in people)
+district_region = {h["district"]: h["region"] for h in D["households"]}
+labour_districts = {h["district"] for h in D["households"] if h["housing"] == "labour accommodation"}
+largest = {}
+for dname, n in district_pop.items():
+    r = district_region[dname]
+    if n > largest.get(r, ("", 0))[1]: largest[r] = (dname, n)
+CLINICS, CLINICIANS = [], []
+cid = did = 0
+for dname in sorted(district_pop, key=lambda x: (district_region[x], x)):
+    n_cl = 2 if district_pop[dname] > 450 else 1
+    for k in range(n_cl):
+        cid += 1
+        name = f"{dname} Healthcare Centre" if k == 0 else f"{dname} Family Clinic"
+        sat = k == 0 and (dname in labour_districts or largest[district_region[dname]][0] == dname)
+        c = {"id": f"L{cid:02d}", "name": name, "district": dname, "region": district_region[dname], "saturday": bool(sat), "staff": []}
+        roster = ["Family physician", "Family physician", "Paediatrician", "Nurse"] if district_region[dname] != "Al Dhafra" else ["Family physician", "Paediatrician", "Nurse"]
+        used_names = set()
+        for i, role in enumerate(roster):
+            did += 1
+            grp = "Arab" if i == 0 else pick_w(CLIN_MIX[role]); fm, ff, ln, langs = CLIN_NAMES[grp]
+            langs = list(langs)
+            if grp != "Arab" and srng.random() < 0.45: langs.insert(0, "Arabic")   # working Arabic among non-Arab staff
+            sex = "F" if srng.random() < (0.85 if role == "Nurse" else 0.5) else "M"
+            for _ in range(20):
+                first = str(srng.choice(ff if sex == "F" else fm)); last = str(srng.choice(ln))
+                if (first, last) not in used_names: break
+            used_names.add((first, last))
+            title = "" if role == "Nurse" else "Dr "
+            cl = {"id": f"D{did:03d}", "name": f"{title}{first} {last}", "role": role, "clinic": c["id"], "languages": langs,
+                  "saturday": bool(sat and (i == 0 or role != "Family physician"))}
+            CLINICIANS.append(cl); c["staff"].append(cl["id"])
+        CLINICS.append(c)
+CLI = {c["id"]: c for c in CLINICIANS}; LOC = {c["id"]: c for c in CLINICS}
+clinics_in = collections.defaultdict(list)
+for c in CLINICS: clinics_in[c["district"]].append(c["id"])
+
+# home clinic per household, treating physician per person
+for h in D["households"]:
+    cl = clinics_in[h["district"]]
+    h["home_clinic"] = cl[int(h["id"][1:]) % len(cl)]
+for p in people:
+    c = LOC[H[p["hh"]]["home_clinic"]]
+    role = "Paediatrician" if p["age"] < 18 else "Family physician"
+    staff = [s for s in c["staff"] if CLI[s]["role"] == role]
+    lang = H[p["hh"]]["lang"]
+    speaks = [s for s in staff if lang in CLI[s]["languages"]]
+    pool = speaks or staff                       # language-concordant treating physician when the clinic has one
+    p["tp"] = pool[int(p["hh"][1:]) % len(pool)]  # one treating physician per role per household
+    p["clinic"] = c["id"]
+
+def purposes_of(p):
+    ps = sorted({RULE_PURPOSE[g["rule"]] for g in p["gaps"] if g["rule"] in RULE_PURPOSE}, key=lambda k: -PURPOSES[k]["weight"])
+    return ps
+def visit_role(p, ps):
+    phys = [k for k in ps if PURPOSES[k]["role"] != "Nurse"]
+    if not phys: return "Nurse"
+    return "Paediatrician" if p["age"] < 18 else "Family physician"
+def visit_minutes(ps, role):
+    mins = sum(PURPOSES[k]["minutes"] for k in ps if PURPOSES[k]["role"] != "Nurse" or role == "Nurse")
+    if role != "Nurse" and any(PURPOSES[k]["role"] == "Nurse" for k in ps): mins += 5   # vaccines or checks given in the same visit
+    return int(min(45, max(10, mins)))
+
+CAL_RULES = [(date.fromisoformat(c["start"]), date.fromisoformat(c["end"]), c) for c in CALENDAR_2026_27]
+def cal_of(d):
+    for s, e, c in CAL_RULES:
+        if s <= d <= e: return c
+    return None
+def sessions_on(d, clinic):
+    c = cal_of(d)
+    if c and c["rule"] == "avoid": return []
+    wd = d.weekday()
+    if c and c["rule"].startswith("evening"):
+        return ["ramadan_evening"] if wd in SESSIONS["ramadan_evening"]["days"] else []
+    out = [k for k, s in SESSIONS.items() if k != "ramadan_evening" and wd in s["days"]]
+    if not clinic["saturday"]: out = [k for k in out if k != "saturday_morning"]
+    return out
+def allowed_sessions(h, members, d):
+    c = cal_of(d); winter = bool(c and c["rule"] == "family-friendly")
+    working = any(P2[m]["role"] in ("father", "mother", "self") and P2[m]["age"] < 60 for m in members)
+    school = any(5 <= P2[m]["age"] < 18 for m in members)
+    if H[h["id"]]["shift_work"]: return {"friday_afternoon", "saturday_morning", "ramadan_evening"}
+    if (working or school) and not winter: return {"weekday_evening", "friday_afternoon", "saturday_morning", "ramadan_evening"}
+    return set(SESSIONS)
+P2 = P
+used = collections.Counter()          # (clinician, date, session) -> minutes booked
+APPTS = []; aid = 0
+for h in hh_out:                      # priority order
+    mem = [m for m in h["members"] if P[m]["gaps"] and P[m]["consent"]["outreach"]]
+    h["appts"] = []; h["slot"] = None; h["home_clinic"] = H[h["id"]]["home_clinic"]
+    if not mem or h["priority"] <= 0: continue
+    clinic = LOC[h["home_clinic"]]
+    booked = None
+    for off in range(7, 85):
+        d = TODAY + timedelta(days=off)
+        allow = allowed_sessions(h, mem, d)
+        for sk in sessions_on(d, clinic):
+            if sk not in allow: continue
+            s = SESSIONS[sk]; cap = int((hm(s["end"]) - hm(s["start"])) * FHD_SHARE)
+            plan, tmp = [], collections.Counter()
+            ok = True
+            for m in sorted(mem, key=lambda x: P[x]["age"]):
+                p = P[m]; ps = purposes_of(p)
+                if not ps: continue
+                role = visit_role(p, ps); dur = visit_minutes(ps, role)
+                cands = [p["tp"]] if role == CLI[p["tp"]]["role"] else []
+                extra = [x for x in clinic["staff"] if CLI[x]["role"] == role and x not in cands and (off > 21 or role == "Nurse" or not cands)]
+                cands += sorted(extra, key=lambda x: h["lang"] not in CLI[x]["languages"])
+                if sk == "saturday_morning": cands = [x for x in cands if CLI[x]["saturday"]]
+                chosen = None
+                for x in cands:
+                    k = (x, d, sk)
+                    if used[k] + tmp[k] + dur <= cap: chosen = x; break
+                if not chosen: ok = False; break
+                k = (chosen, d, sk); start = hm(s["start"]) + used[k] + tmp[k]; tmp[k] += dur
+                plan.append((m, chosen, start, dur, ps, role))
+            if ok and plan:
+                for k, v in tmp.items(): used[k] += v
+                booked = (d, sk, plan); break
+        if booked: break
+    if not booked:
+        h["waitlist"] = True; continue
+    d, sk, plan = booked
+    for m, chosen, start, dur, ps, role in plan:
+        aid += 1
+        cl = CLI[chosen]; lang = h["lang"]
+        a = {"id": f"A{aid:05d}", "hh": h["id"], "pid": m, "clinic": clinic["id"], "clinician": chosen, "date": d.isoformat(),
+             "start": fmt_hm(start), "end": fmt_hm(start + dur), "minutes": dur, "session": sk, "purposes": ps, "role": role,
+             "continuity": chosen == P[m]["tp"], "interpreter": lang not in cl["languages"]}
+        APPTS.append(a); h["appts"].append(a["id"]); P[m]["appt"] = a["id"]
+    first = min((x for x in APPTS if x["hh"] == h["id"]), key=lambda x: x["start"])
+    c = cal_of(d); why = []
+    if c: why.append(c["name"] + " — " + c["rule"])
+    if H[h["id"]]["shift_work"]: why.append("shift-work household: weekend session")
+    if any(5 <= P[m]["age"] < 18 for m in mem) and sk == "weekday_evening": why.append("school-age child: after school hours")
+    why.append(f"{clinic['name']}, treating physicians first")
+    h["slot"] = {"date": d.isoformat(), "time": first["start"] + (" (after iftar)" if sk == "ramadan_evening" else ""), "why": why}
+n_cont = sum(a["continuity"] for a in APPTS if a["role"] != "Nurse"); n_phys = sum(a["role"] != "Nurse" for a in APPTS)
+print(f"clinics {len(CLINICS)} clinicians {len(CLINICIANS)} appointments {len(APPTS)} households booked {sum(1 for h in hh_out if h['appts'])} "
+      f"waitlisted {sum(1 for h in hh_out if h.get('waitlist'))} continuity {n_cont}/{n_phys} interpreter {sum(a['interpreter'] for a in APPTS)}")
+
 # =========================================================== 7. EQUITY & SAFEGUARDS AUDIT
 def members_sel(alloc):
     out = set()
@@ -640,7 +799,7 @@ def slim_gap(g):
     return o
 
 def slim(p):
-    keep = ["id", "hh", "group", "sex", "age", "role", "mother", "father", "first", "last", "consent", "genomic_available",
+    keep = ["id", "hh", "group", "sex", "age", "role", "mother", "father", "first", "last", "consent", "genomic_available", "tp", "clinic", "appt",
             "gaps", "score", "p_attend", "barriers", "completeness", "confidence", "priority", "priority_parts"]
     o = {k: p.get(k) for k in keep}
     o["gaps"] = [slim_gap(g) for g in p["gaps"]]
@@ -703,7 +862,8 @@ OUT = {"version": GUIDELINE_VERSION, "today": D["today"], "summary": summary, "v
        "simulation": SIM, "audit": AUDIT, "alerts": alerts, "community": community,
        "calendar": CALENDAR_2026_27, "rules": {"child": CHILD_RULES, "adult": ADULT_RULES, "risk": RISK_PATHWAYS,
                                                "wcv_ages": WCV_AGES_MONTHS},
-       "small_cell": SMALL_CELL_THRESHOLD, "gap_meta": GAP_META, "gap_weight": GAP_WEIGHT}
+       "small_cell": SMALL_CELL_THRESHOLD, "gap_meta": GAP_META, "gap_weight": GAP_WEIGHT,
+       "clinics": CLINICS, "clinicians": CLINICIANS, "appointments": APPTS, "purposes": PURPOSES, "rule_purpose": RULE_PURPOSE}
 # compact encoding: feature vectors as arrays (model feature order), factor labels as label-table indices
 LABEL_LIST = list(LABEL.values()); LIDX = {v: i for i, v in enumerate(LABEL_LIST)}
 for o in OUT["people"].values():
