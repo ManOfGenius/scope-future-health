@@ -1,0 +1,1193 @@
+<title>S.C.O.P.E</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tenor+Sans&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans+Arabic:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Nastaliq+Urdu&family=Noto+Sans+Devanagari&family=Noto+Sans+Malayalam&family=Noto+Sans+Bengali&display=swap">
+<style>
+/* Layout: sticky woven header + tabbed operator console; family view = graph left, member dossiers right */
+/* Layout: launch hero (emblem as the O) -> operator console tabs; family experience = two phones side by side */
+:root{
+  --bg:#EDF1F4; --surface:#FFFFFF; --surface-2:#E3E9EE; --ink:#142230; --ink-2:#3A4B5C; --muted:#5D6D7C;
+  --line:#D0D9E1; --teal:#1F74C4; --teal-ink:#145A9C; --teal-soft:#DCE8F5; --red:#C0392B; --red-soft:#F6DFDB;
+  --amber:#946500; --amber-soft:#F5EACB; --good:#2E7D4F; --good-soft:#DDEFE3; --base:#9AA5AF;
+  --band:#101A23; --band-2:#1C2833; --band-ink:#E8EEF3; --glow:#4FB4FF;
+  --metal-1:#7D8D9B; --metal-2:#2E3D4B; --metal-3:#5E7183; --hero-1:#F4F7F9; --hero-2:#D3DCE3;
+  --f-display:"Tenor Sans","IBM Plex Sans",system-ui,sans-serif; --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace; --f-ar:"IBM Plex Sans Arabic","Noto Naskh Arabic",Tahoma,sans-serif;
+  --r:10px; --shadow:0 1px 2px rgba(20,34,48,.06),0 4px 14px rgba(20,34,48,.05);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0A1118; --surface:#111B24; --surface-2:#17232E; --ink:#E5ECF2; --ink-2:#B5C3CF; --muted:#8A9AA8;
+  --line:#22303C; --teal:#3591DE; --teal-ink:#7BB9F0; --teal-soft:#132A3F; --red:#E0665A; --red-soft:#3A1F1C;
+  --amber:#E0B04A; --amber-soft:#3A2F14; --good:#5EC087; --good-soft:#163323; --base:#6E7C88;
+  --band:#060B10; --band-2:#111B24; --band-ink:#E5ECF2; --glow:#4FB4FF;
+  --metal-1:#FFFFFF; --metal-2:#A9B7C3; --metal-3:#E6ECF1; --hero-1:#0F1922; --hero-2:#04070A;
+  --shadow:0 1px 2px rgba(0,0,0,.35); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0A1118; --surface:#111B24; --surface-2:#17232E; --ink:#E5ECF2; --ink-2:#B5C3CF; --muted:#8A9AA8;
+  --line:#22303C; --teal:#3591DE; --teal-ink:#7BB9F0; --teal-soft:#132A3F; --red:#E0665A; --red-soft:#3A1F1C;
+  --amber:#E0B04A; --amber-soft:#3A2F14; --good:#5EC087; --good-soft:#163323; --base:#6E7C88;
+  --band:#060B10; --band-2:#111B24; --band-ink:#E5ECF2; --glow:#4FB4FF;
+  --metal-1:#FFFFFF; --metal-2:#A9B7C3; --metal-3:#E6ECF1; --hero-1:#0F1922; --hero-2:#04070A;
+  --shadow:0 1px 2px rgba(0,0,0,.35); color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+section.view>*{min-width:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--band)}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;letter-spacing:.01em;line-height:1.2;text-wrap:balance;margin:0}
+h2{font-size:1.55rem} h3{font-size:1.1rem}
+p{margin:0} a{color:var(--teal-ink)}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--f-mono);font-size:.85em}
+.muted{color:var(--muted)} .small{font-size:.85rem} .tiny{font-size:.76rem}
+.eyebrow{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:4px}
+
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:linear-gradient(180deg,var(--band-2),var(--band));color:var(--band-ink)}
+.glowline{height:2px;background:linear-gradient(90deg,transparent,var(--glow) 30%,#BFE3FF 50%,var(--glow) 70%,transparent);opacity:.85}
+.sadu{height:9px;background:
+  linear-gradient(135deg,var(--red) 25%,transparent 25%) -4.5px 0/9px 9px,
+  linear-gradient(225deg,var(--red) 25%,transparent 25%) -4.5px 0/9px 9px,
+  linear-gradient(315deg,#E9E2D0 25%,transparent 25%) 0 0/9px 9px,
+  linear-gradient(45deg,#E9E2D0 25%,transparent 25%) 0 0/9px 9px, var(--band)}
+.bar{display:flex;align-items:center;gap:20px;padding-block:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none}
+.brand img{height:34px;width:auto;filter:drop-shadow(0 0 6px rgba(79,180,255,.35))}
+.brand b{font-family:var(--f-display);font-weight:400;font-size:1.4rem;letter-spacing:.14em}
+.themebtn{background:transparent;border:1px solid rgba(255,255,255,.18);color:var(--band-ink);border-radius:99px;padding:5px 11px 5px 8px;display:inline-flex;gap:6px;align-items:center;font-size:.8rem;cursor:pointer}
+.themebtn:hover{background:rgba(255,255,255,.08)} .themebtn svg{width:16px;height:16px}
+.brand span.tag{font-size:.78rem;opacity:.7}
+@media (max-width:640px){.brand span.tag{display:none}}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;margin-left:auto;scrollbar-width:none}
+nav.tabs a{color:var(--band-ink);text-decoration:none;padding:7px 12px;border-radius:7px;font-size:.88rem;white-space:nowrap;opacity:.78}
+nav.tabs a:hover{opacity:1;background:rgba(255,255,255,.07)}
+nav.tabs a[aria-current="page"]{opacity:1;background:rgba(255,255,255,.12);box-shadow:inset 0 -2px 0 var(--teal)}
+.synth{font-size:.72rem;background:var(--amber-soft);color:var(--amber);padding:3px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+
+main{padding-block:26px 60px}
+section.view{display:grid;gap:22px}
+.lede{max-width:70ch;color:var(--ink-2)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);min-width:0}
+.panel>h3{margin-bottom:10px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.kpi{background:var(--surface);padding:14px 16px;display:grid;gap:2px}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi .v{font-family:var(--f-display);font-size:1.7rem;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:.8rem;color:var(--muted);line-height:1.3}
+
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:.73rem;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap;line-height:1.6}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.c-over{background:var(--red-soft);color:var(--red)} .c-due{background:var(--amber-soft);color:var(--amber)}
+.c-risk{background:var(--teal-soft);color:var(--teal-ink)} .c-sys{background:var(--surface-2);color:var(--ink-2)}
+.c-ok{background:var(--good-soft);color:var(--good)}
+.conf{font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:5px;border:1px solid var(--line);white-space:nowrap}
+.conf.high{color:var(--good);border-color:currentColor} .conf.medium{color:var(--amber);border-color:currentColor}
+.conf.low,.conf.insufficient{color:var(--red);border-color:currentColor}
+
+/* comparison small multiples */
+.cmp{display:grid;gap:14px}
+.cmp-row{display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr) 64px;gap:12px;align-items:center}
+.cmp-row .lab{font-size:.88rem;line-height:1.3}
+.cmp-row .gain{font-family:var(--f-display);font-size:1.05rem;color:var(--teal-ink);text-align:right}
+.bars{display:grid;gap:4px}
+.brow{display:grid;grid-template-columns:1fr;position:relative;height:16px}
+.brow .b{height:16px;border-radius:0 4px 4px 0;position:relative}
+.brow .b.base{background:var(--base)} .brow .b.bayt{background:var(--teal)}
+.brow .ci{position:absolute;top:7px;height:2px;background:var(--ink-2);opacity:.55}
+.brow .val{position:absolute;top:-1px;font-size:.75rem;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.8rem;color:var(--ink-2)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+
+/* featured */
+.feature{display:grid;gap:8px;text-align:left;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+.feature:hover{border-color:var(--teal)}
+.feature .who{font-family:var(--f-display);font-size:1.15rem}
+.feature ul{margin:0;padding-left:18px;color:var(--ink-2);font-size:.88rem}
+
+/* table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--surface-2);position:sticky;top:0}
+td.r,th.r{text-align:right} tbody tr:hover{background:var(--surface-2)}
+tr.click{cursor:pointer}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.filters label{display:grid;gap:3px;font-size:.74rem;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+select,input[type=search]{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:.88rem;min-width:0}
+.btn{background:var(--teal);color:#fff;border:0;border-radius:7px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:.88rem}
+.btn.ghost{background:transparent;color:var(--teal-ink);border:1px solid var(--line)}
+.btn:hover{filter:brightness(1.05)}
+.pbar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;min-width:60px}
+.pbar i{display:block;height:100%;background:var(--teal)}
+
+/* family */
+.fam-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:end}
+.fam-head .meta{display:flex;gap:8px;flex-wrap:wrap}
+.fam-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:18px;align-items:start}
+@media (max-width:900px){.fam-grid{grid-template-columns:1fr}}
+.graph svg{width:100%;height:auto;display:block}
+.plan{display:grid;gap:10px;background:var(--teal-soft);border:1px solid color-mix(in srgb,var(--teal) 30%,transparent);border-radius:var(--r);padding:16px}
+.plan .when{font-family:var(--f-display);font-size:1.3rem;color:var(--teal-ink)}
+.plan ul{margin:0;padding-left:18px;font-size:.88rem}
+.member{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.member:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.mhead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.mhead .nm{font-family:var(--f-display);font-size:1.12rem}
+.gaps{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.gaps li{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:start;font-size:.88rem}
+.gaps .src{grid-column:2;font-size:.75rem;color:var(--muted)}
+.riskbox{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;background:var(--surface-2);border-radius:8px;padding:12px}
+@media (max-width:560px){.riskbox{grid-template-columns:1fr}}
+.rscale{position:relative;height:22px;margin-top:4px}
+.rscale .track{position:absolute;left:0;right:0;top:9px;height:4px;border-radius:2px;background:var(--line)}
+.rscale .iv{position:absolute;top:7px;height:8px;border-radius:4px;background:color-mix(in srgb,var(--teal) 35%,transparent)}
+.rscale .pt{position:absolute;top:4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--teal);border:2px solid var(--surface)}
+.rscale .avg{position:absolute;top:2px;width:2px;height:18px;background:var(--ink-2);opacity:.5}
+.factor{display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:8px;align-items:center;font-size:.8rem}
+.factor .fb{position:relative;height:8px}
+.factor .fb::before{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--line)}
+.factor .fb i{position:absolute;top:0;height:8px;border-radius:2px}
+.disclaimer{font-size:.76rem;color:var(--ink-2);border-left:3px solid var(--teal);padding:4px 10px;background:var(--surface-2);border-radius:0 6px 6px 0}
+.consent{display:flex;gap:6px;flex-wrap:wrap}
+.tog{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;border:1px solid var(--line);border-radius:99px;padding:3px 10px 3px 4px;cursor:pointer;background:var(--surface);user-select:none}
+.tog input{appearance:none;width:26px;height:15px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;margin:0;transition:background .15s}
+.tog input::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--surface);transition:left .15s}
+.tog input:checked{background:var(--teal)} .tog input:checked::after{left:13px}
+.tog input:disabled{opacity:.35}
+.change{font-size:.78rem;color:var(--amber);font-weight:600}
+
+/* messages */
+.msg-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,380px);gap:22px;align-items:start}
+@media (max-width:860px){.msg-grid{grid-template-columns:1fr}}
+.phone{width:100%;max-width:360px;margin:0 auto;border-radius:34px;border:10px solid var(--band);background:#E8DED2;overflow:hidden;box-shadow:var(--shadow)}
+:root[data-theme="dark"] .phone{background:#0E1A17}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .phone{background:#0E1A17}}
+.phone .ph-top{background:#075E54;color:#fff;padding:12px 14px;display:flex;gap:10px;align-items:center}
+.phone .ph-top .av{width:34px;height:34px;border-radius:50%;background:#fff;color:#075E54;display:grid;place-items:center;font-family:var(--f-display);font-weight:700}
+.phone .ph-body{padding:14px;display:grid;gap:10px;min-height:420px;align-content:start}
+.bubble{background:#fff;color:#111;border-radius:0 10px 10px 10px;padding:9px 11px 6px;font-size:.92rem;line-height:1.6;box-shadow:0 1px 1px rgba(0,0,0,.1);max-width:94%;white-space:pre-wrap}
+:root[data-theme="dark"] .bubble{background:#1F2C33;color:#E9EDEF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .bubble{background:#1F2C33;color:#E9EDEF}}
+.bubble[dir="rtl"]{border-radius:10px 0 10px 10px;justify-self:start}
+.bubble .ts{display:block;text-align:right;font-size:.68rem;opacity:.55;margin-top:2px}
+.lang-ar,.lang-ar *{font-family:var(--f-ar)} .lang-ur{font-family:"Noto Nastaliq Urdu",var(--f-ar);line-height:2.1}
+.lang-hi{font-family:"Noto Sans Devanagari",var(--f-body)} .lang-ml{font-family:"Noto Sans Malayalam",var(--f-body)}
+.lang-bn{font-family:"Noto Sans Bengali",var(--f-body)}
+.qr{display:flex;flex-wrap:wrap;gap:6px}
+.qr button{background:#fff;color:#075E54;border:0;border-radius:16px;padding:6px 11px;font-size:.8rem;cursor:pointer;box-shadow:0 1px 1px rgba(0,0,0,.1)}
+:root[data-theme="dark"] .qr button{background:#1F2C33;color:#53BDEB}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .qr button{background:#1F2C33;color:#53BDEB}}
+.reply{justify-self:end;background:#D9FDD3;color:#111;border-radius:10px 0 10px 10px;padding:7px 11px;font-size:.88rem}
+:root[data-theme="dark"] .reply{background:#005C4B;color:#E9EDEF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .reply{background:#005C4B;color:#E9EDEF}}
+.voice{display:flex;align-items:center;gap:10px}
+.voice .play{width:30px;height:30px;border-radius:50%;background:#075E54;color:#fff;display:grid;place-items:center;font-size:.8rem;flex:none}
+.voice .wave{flex:1;height:26px;display:flex;align-items:center;gap:2px}
+.voice .wave i{flex:1;background:#8696A0;border-radius:2px}
+.rules{margin:0;padding-left:18px;display:grid;gap:4px;font-size:.88rem;color:var(--ink-2)}
+
+/* safeguards */
+.alert{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 12px;border-radius:8px;font-size:.86rem}
+.alert.open{background:var(--amber-soft)} .alert.resolved{background:var(--good-soft)} .alert.watch{background:var(--teal-soft)}
+.alert b{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+.alert.open b{color:var(--amber)} .alert.resolved b{color:var(--good)} .alert.watch b{color:var(--teal-ink)}
+td.sup{color:var(--muted);font-style:italic}
+.calib svg{width:100%;height:auto;display:block}
+.diagram svg{width:100%;height:auto;display:block;min-width:720px}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:.78rem;padding:6px 9px;border-radius:6px;z-index:20;max-width:260px;line-height:1.4}
+details.panel summary{cursor:pointer;font-family:var(--f-display);font-size:1.05rem}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:.86rem}
+dl.kv dt{color:var(--muted)} dl.kv dd{margin:0}
+
+/* launch */
+.hero{position:relative;overflow:hidden;border-radius:18px;background:radial-gradient(ellipse at 50% 38%,var(--hero-1),var(--hero-2) 75%);border:1px solid var(--line);padding:clamp(36px,7vw,80px) 20px clamp(30px,5vw,56px);display:grid;justify-items:center;gap:14px;text-align:center}
+.hero::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);pointer-events:none}
+.hero-glow{position:absolute;left:50%;top:44%;width:min(560px,90vw);height:min(560px,90vw);transform:translate(-50%,-55%);background:radial-gradient(circle,rgba(79,180,255,.28),transparent 62%);animation:breathe 5s ease-in-out infinite;pointer-events:none}
+@keyframes breathe{0%,100%{opacity:.55}50%{opacity:1}}
+.wordmark{position:relative;display:flex;align-items:center;justify-content:center;gap:.06em;font-family:var(--f-display);font-weight:400;font-size:clamp(54px,11vw,148px);line-height:1;letter-spacing:.06em;margin:0}
+.wordmark span{background:linear-gradient(180deg,var(--metal-1) 8%,var(--metal-2) 58%,var(--metal-3) 92%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-block:.06em}
+.wordmark img{height:1.62em;width:auto;margin-inline:.04em;filter:drop-shadow(0 10px 22px rgba(0,0,0,.35)) drop-shadow(0 0 18px rgba(79,180,255,.25))}
+.fullname{position:relative;font-family:var(--f-display);font-size:clamp(.95rem,2.2vw,1.25rem);letter-spacing:.08em;color:var(--ink-2);text-wrap:balance}
+.slogan{position:relative;font-size:clamp(1.15rem,2.6vw,1.6rem);font-family:var(--f-display);color:var(--ink);max-width:28ch;text-wrap:balance;margin-top:6px}
+.slogan-ar{position:relative;font-family:var(--f-ar);font-size:clamp(1.05rem,2.3vw,1.4rem);color:var(--ink-2)}
+.cta{position:relative;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.btn.big{padding:12px 20px;font-size:.95rem;text-decoration:none;border-radius:9px}
+.btn.ghost.big{background:var(--surface);}
+.pillars{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+@media (max-width:900px){.pillars{grid-template-columns:1fr}}
+.pillar{background:var(--surface);padding:18px;display:grid;gap:6px;align-content:start}
+.pillar .L{font-family:var(--f-display);font-size:2.2rem;line-height:1;color:var(--teal)}
+.pillar b{font-weight:600} .pillar p{font-size:.88rem;color:var(--ink-2)}
+.proof{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:20px;max-width:900px;margin:0 auto;width:100%}
+.proof div{display:grid;text-align:center} .proof .v{font-family:var(--f-display);font-size:1.9rem} .proof .l{font-size:.8rem;color:var(--muted)}
+
+/* family app */
+.fa-grid{display:grid;grid-template-columns:repeat(2,minmax(0,380px)) minmax(0,1fr);gap:22px;align-items:start;justify-content:center}
+@media (max-width:1180px){.fa-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fa-side{grid-column:1/-1}}
+@media (max-width:760px){.fa-grid{grid-template-columns:1fr}}
+.phone .ph-body{max-height:640px;overflow-y:auto;scroll-behavior:smooth}
+.phone.app{background:var(--bg)}
+.phone.app .app-top{background:linear-gradient(180deg,var(--band-2),var(--band));color:var(--band-ink);padding:12px 14px;display:flex;align-items:center;gap:9px}
+.phone.app .app-top img{height:26px} .phone.app .app-top b{font-family:var(--f-display);font-weight:400;letter-spacing:.1em}
+.phone.app .app-top .lng{margin-inline-start:auto;display:flex;gap:2px;background:rgba(255,255,255,.1);border-radius:99px;padding:2px}
+.phone.app .app-top .lng button{background:transparent;border:0;color:var(--band-ink);font-size:.72rem;padding:3px 8px;border-radius:99px;cursor:pointer}
+.phone.app .app-top .lng button[aria-pressed="true"]{background:var(--surface);color:var(--ink)}
+.app-body{padding:14px;display:grid;gap:12px;min-height:560px;max-height:640px;overflow-y:auto;align-content:start}
+.app-body[dir="rtl"]{font-family:var(--f-ar)}
+.app-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:8px}
+.app-card.hl{background:var(--teal-soft);border-color:color-mix(in srgb,var(--teal) 35%,transparent)}
+.app-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;width:100%;text-align:start}
+.app-row:hover{border-color:var(--teal)} .app-row .av{width:34px;height:34px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;font-family:var(--f-display);flex:none}
+.app-row .grow{flex:1;min-width:0;display:grid} .app-row .chev{color:var(--muted)}
+.app-nav{display:flex;border-top:1px solid var(--line);background:var(--surface)}
+.app-nav button{flex:1;background:transparent;border:0;padding:10px 4px;font-size:.74rem;color:var(--muted);cursor:pointer}
+.app-nav button[aria-current="true"]{color:var(--teal-ink);font-weight:600;box-shadow:inset 0 2px 0 var(--teal)}
+.uaepass{display:flex;align-items:center;justify-content:center;gap:8px;background:#000;color:#fff;border:0;border-radius:9px;padding:12px;font-weight:600;cursor:pointer;width:100%}
+.uaepass i{width:20px;height:20px;border-radius:50%;background:conic-gradient(#C8102E 0 25%,#00843D 0 50%,#fff 0 75%,#000 0);border:2px solid #fff;flex:none}
+.chatlink{color:#027EB5;text-decoration:underline;cursor:pointer;background:none;border:0;padding:0;font:inherit;text-align:start}
+.stepper{display:flex;gap:6px;flex-wrap:wrap}
+.stepper button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:.8rem;cursor:pointer}
+.stepper button[aria-current="true"]{background:var(--teal);color:#fff;border-color:var(--teal)}
+.stepper button:disabled{opacity:.45;cursor:not-allowed}
+.sync{font-size:.8rem;background:var(--good-soft);color:var(--good);padding:8px 10px;border-radius:8px}
+.code{font-family:var(--f-mono);font-size:1.1rem;letter-spacing:.2em;background:var(--surface-2);padding:6px 10px;border-radius:6px;display:inline-block}
+
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="top">
+  <div class="wrap bar">
+    <a class="brand" href="#home" aria-label="S.C.O.P.E home"><img src="__LOGO_SMALL__" alt=""><b>S.C.O.P.E</b><span class="tag">Prevention intelligence · Abu Dhabi</span></a>
+    <span class="synth" title="All records are synthetic. No real patient data is used.">Synthetic population · demo</span>
+    <button class="themebtn" id="themebtn" type="button"></button>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#overview">Overview</a><a href="#worklist">Outreach worklist</a><a href="#family">Family view</a>
+      <a href="#family-app">Family app</a><a href="#safeguards">Safeguards</a><a href="#outcomes">Outcomes</a><a href="#governance">Governance</a>
+    </nav>
+  </div>
+  <div class="glowline" aria-hidden="true"></div>
+</header>
+
+<main class="wrap">
+  <section class="view" id="v-home"></section>
+  <section class="view" id="v-overview" hidden></section>
+  <section class="view" id="v-worklist" hidden></section>
+  <section class="view" id="v-family" hidden></section>
+  <section class="view" id="v-familyapp" hidden></section>
+  <section class="view" id="v-safeguards" hidden></section>
+  <section class="view" id="v-outcomes" hidden></section>
+  <section class="view" id="v-governance" hidden></section>
+</main>
+<div class="tip" id="tip" hidden></div>
+
+<script id="bayt-data" type="application/json">/*__DATA__*/</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("bayt-data").textContent);
+const P = D.people, HH = Object.fromEntries(D.households.map(h => [h.id, h]));
+const L = D.labels, S = D.simulation, M = D.models;
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = n => Number(n).toLocaleString("en-GB");
+const pct = (x, d = 0) => x == null ? "–" : (x * 100).toFixed(d) + "%";
+const sig = z => 1 / (1 + Math.exp(-z));
+
+/* ---------------- consent state (live, per viewer) ---------------- */
+const CONSENT_KEYS = ["genomic", "family_link", "social", "outreach"];
+const CONSENT_LABEL = {genomic: "Genomic data", family_link: "Family linkage", social: "Social context", outreach: "Outreach"};
+const consent = {};
+function C(id) { if (!consent[id]) consent[id] = Object.fromEntries(CONSENT_KEYS.map((k, i) => [k, !!P[id].consent[i]])); return consent[id]; }
+function changedConsent(id) { const c = C(id); return CONSENT_KEYS.some((k, i) => c[k] !== !!P[id].consent[i]); }
+
+function gapVisible(p, g) {
+  if (g.r.startsWith("CASCADE")) {
+    const via = g.via && P[g.via];
+    if (!via) return true;
+    const cv = C(g.via), cp = C(p.id);
+    return cv.genomic && cv.family_link && cp.family_link;
+  }
+  return true;
+}
+function visibleGaps(p) { return p.gaps.filter(g => gapVisible(p, g)); }
+
+function live(p) {
+  // recompute risk, confidence and priority under the current consent state
+  const c = C(p.id), o = p.consent;
+  const res = {risk: null, lo: null, hi: null, rr: 1, factors: [], completeness: p.completeness, confidence: p.confidence, priority: p.priority};
+  if (p.score && p.feat) {
+    const m = M[p.score.model], f = m.features, x = p.feat.slice();
+    const set = (k, v) => { const i = f.indexOf(k); if (i >= 0) x[i] = v; };
+    if (p.score.model === "adult" && !c.genomic) { set("fh_variant", 0); set("genomic_not_available", 1); }
+    if (p.score.model === "child") {
+      if (!c.family_link) { set("consanguinity", 0); set("family_hx_developmental", 0); set("family_data_not_shared", 1); }
+      if (!c.social) set("high_screen_time", 0);
+    }
+    let z = m.intercept + (p.off || 0); for (let i = 0; i < f.length; i++) z += m.coef[i] * x[i];
+    const r = sig(z), w0 = p.score.risk - p.score.lo, w1 = p.score.hi - p.score.risk;
+    res.risk = r; res.lo = Math.max(0, r - w0); res.hi = Math.min(1, r + w1); res.rr = r / m.prevalence;
+    res.factors = f.map((k, i) => [m.labels[i], m.coef[i] * (x[i] - m.means[i])]).filter(t => Math.abs(t[1]) > .05)
+      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 4);
+  }
+  let comp = p.completeness;
+  if (p.genomic_available) comp += .2 * ((+c.genomic) - o[0]);
+  comp += .2 * ((+c.family_link) - o[1]) + .2 * ((+c.social) - o[2]);
+  comp = Math.max(0, Math.min(1, comp)); res.completeness = comp;
+  const width = res.hi != null ? res.hi - res.lo : 0;
+  res.confidence = comp < .4 ? "insufficient data" : comp >= .8 && width < .12 ? "high" : comp >= .6 ? "medium" : "low";
+  if (!changedConsent(p.id)) res.confidence = p.confidence;
+  // priority
+  const gaps = visibleGaps(p);
+  let need = 0; for (const g of gaps) need += (D.gap_weight[g.r] || 1) * (g.s === "overdue" ? 1.3 : 1);
+  let rr = p.score ? Math.min(res.rr, 4) : 1;
+  if (gaps.some(g => g.r.startsWith("CASCADE"))) rr = Math.max(rr, 2.5);
+  if (gaps.some(g => g.r === "WCV-MCHAT-REF")) rr = Math.max(rr, 3);
+  res.priority = c.outreach ? need * (.5 + .5 * rr) * (.6 + (1 - p.p_attend)) : 0;
+  res.gaps = gaps;
+  return res;
+}
+const hhPriority = h => h.members.reduce((s, m) => s + live(P[m]).priority, 0);
+
+/* ---------------- vocab ---------------- */
+const STATUS = {overdue: ["Overdue", "c-over"], never: ["Never done", "c-over"], due: ["Due soon", "c-due"], "risk-based": ["Risk-based", "c-risk"], system: ["System gap", "c-sys"]};
+const chip = s => { const [t, c] = STATUS[s] || [s, "c-sys"]; return `<span class="chip ${c}">${t}</span>`; };
+const confB = c => `<span class="conf ${c.split(" ")[0]}" title="Data completeness and model interval width">${c === "insufficient data" ? "Insufficient data" : c[0].toUpperCase() + c.slice(1) + " confidence"}</span>`;
+const ROLE = {father: "Father", mother: "Mother", grandmother: "Grandmother", grandfather: "Grandfather", child: "Child", self: "Adult"};
+const ageTxt = a => a < 2 ? Math.round(a * 12) + " months" : Math.floor(a) + " years";
+const dateTxt = (iso, loc = "en-GB") => new Date(iso + "T12:00:00").toLocaleDateString(loc, {weekday: "long", day: "numeric", month: "long"});
+const nameOf = p => `${p.first} ${p.last}`;
+
+/* ---------------- tooltip ---------------- */
+const tip = $("#tip");
+document.addEventListener("mouseover", e => { const t = e.target.closest("[data-tip]"); if (!t) { tip.hidden = true; return; } tip.textContent = t.dataset.tip; tip.hidden = false; });
+document.addEventListener("mousemove", e => { if (!tip.hidden) { tip.style.left = Math.min(e.clientX + 14, innerWidth - 270) + "px"; tip.style.top = (e.clientY + 14) + "px"; } });
+
+/* ---------------- featured families ---------------- */
+function pickFeatured() {
+  const H = D.households, rules = h => h.members.flatMap(m => P[m].gaps.map(g => g.r));
+  const roles = h => h.members.map(m => P[m].role);
+  const contactIsIndex = h => h.members.some(m => P[m].gaps.some(g => g.r.startsWith("CASCADE") && g.via && (g.via === h.contact || (P[g.via].age < 18 && h.members.includes(g.via) && ["mother", "father"].includes(P[h.contact].role)))));
+  const a = H.find(h => h.group === "Emirati" && contactIsIndex(h) && roles(h).some(r => r.startsWith("grand")))
+         || H.find(h => h.group === "Emirati" && contactIsIndex(h))
+         || H.find(h => h.selected && h.group === "Emirati" && rules(h).some(r => r.startsWith("CASCADE")) && roles(h).some(r => r.startsWith("grand")))
+         || H.find(h => h.group === "Emirati" && rules(h).some(r => r.startsWith("CASCADE")));
+  const b = H.find(h => h.selected && ["Malayalam", "Urdu", "Bengali", "Hindi"].includes(h.lang) && h.housing !== "labour accommodation" && rules(h).some(r => r.startsWith("WCV-MCHAT")));
+  const c = H.find(h => h.housing === "labour accommodation" && h.region === "Al Dhafra" && h.lang !== "English" && h.n_gaps);
+  return [a, b, c].filter(Boolean);
+}
+const FEATURED = pickFeatured();
+let currentFamily = FEATURED[0]?.id;
+
+/* ================= THEME (day / night) ================= */
+const LOGO_BIG = "__LOGO_BIG__", LOGO_SMALL = "__LOGO_SMALL__";
+const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>';
+function effectiveTheme() {
+  const t = document.documentElement.dataset.theme;
+  if (t === "dark" || t === "light") return t;
+  return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function paintThemeBtn() {
+  const dark = effectiveTheme() === "dark", b = $("#themebtn");
+  b.innerHTML = dark ? SUN + "Day mode" : MOON + "Night mode";
+  b.setAttribute("aria-label", dark ? "Switch to day mode" : "Switch to night mode");
+}
+(function initTheme() {
+  try { const t = localStorage.getItem("scope-theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; } catch (e) {}
+  paintThemeBtn();
+  $("#themebtn").onclick = () => {
+    const next = effectiveTheme() === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("scope-theme", next); } catch (e) {}
+    paintThemeBtn();
+  };
+  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", paintThemeBtn);
+})();
+
+/* ================= LAUNCH ================= */
+function renderHome() {
+  const B = S.baseline_age_sex_rules, F = S.bayt_full;
+  const gain = (F.true_high_risk_reached.mean / B.true_high_risk_reached.mean).toFixed(1);
+  const pillars = [
+    ["S", "Screening", "Every child and adult checked against the Well-Child Visit and IFHAS standards, item by item."],
+    ["C", "Care", "Calibrated risk from clinical, genomic and family data, used only with consent and shown with its uncertainty."],
+    ["O", "Orchestration", "One Family Health Day per household, timed around school, work, prayer and Ramadan."],
+    ["P", "Prevention", "Measured in completed visits, timely follow-up and calibration, not in the number of flags."],
+    ["E", "Everywhere", "Seven languages, voice notes, mobile clinics for shared housing, and an audit of who is missed."],
+  ].map(([l, t, d]) => `<div class="pillar"><span class="L">${l}</span><b>${t}</b><p>${d}</p></div>`).join("");
+  $("#v-home").innerHTML = `
+  <div class="hero">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <h1 class="wordmark" aria-label="S.C.O.P.E"><span>S.C</span><img src="${LOGO_BIG}" alt=""><span>P.E</span></h1>
+    <p class="fullname">Screening &amp; Care Orchestration for Prevention Everywhere</p>
+    <p class="slogan">Every family seen.<br>Every risk reached, in time.</p>
+    <p class="slogan-ar" lang="ar" dir="rtl">نرى كل أسرة، ونبلغ كل خطر في وقته.</p>
+    <div class="cta"><a class="btn big" href="#overview">Open the health-team console</a><a class="btn ghost big" href="#family-app">See the family experience</a></div>
+  </div>
+  <div class="pillars">${pillars}</div>
+  <div class="proof">
+    <div><span class="v num">×${gain}</span><span class="l">high-risk people reached, same budget</span></div>
+    <div><span class="v num">${fmt(D.summary.households)}</span><span class="l">households in the synthetic population</span></div>
+    <div><span class="v num">7</span><span class="l">languages in family invitations</span></div>
+    <div><span class="v num">0</span><span class="l">health details sent by WhatsApp</span></div>
+  </div>
+  <p class="tiny muted" style="text-align:center">Prototype for the Future Health Digital Innovation Challenge 2026 · Population Health · all records are synthetic</p>`;
+}
+
+/* ================= OVERVIEW ================= */
+function renderOverview() {
+  const s = D.summary, B = S.baseline_age_sex_rules, F = S.bayt_full;
+  const rows = [
+    ["true_high_risk_reached", "People at genuinely high risk reached"],
+    ["care_gaps_closed", "Care gaps closed"],
+    ["mchat_completed", "Autism screens (M-CHAT-R) completed"],
+    ["completed_child_visits", "Children completing a Well-Child Visit"],
+    ["completed_adult_screens", "Adults completing a screening"],
+    ["undiagnosed_diabetes_found", "Undiagnosed diabetes found"],
+    ["vaccines_caught_up", "Children brought up to date on vaccines"],
+    ["language_minority_reached", "Reached in Urdu, Malayalam, Hindi, Bengali or Tagalog"],
+  ];
+  const cmp = rows.map(([k, lab]) => {
+    const b = B[k], f = F[k], mx = Math.max(b.hi, f.hi) * 1.18 || 1, g = b.mean ? f.mean / b.mean : null;
+    const bar = (v, cls, name) => `<div class="brow" data-tip="${name}: ${fmt(v.mean)} (95% interval ${fmt(v.lo)}–${fmt(v.hi)})">
+      <div class="b ${cls}" style="width:${v.mean / mx * 100}%"></div>
+      <div class="ci" style="left:${v.lo / mx * 100}%;width:${(v.hi - v.lo) / mx * 100}%"></div>
+      <span class="val" style="left:calc(${v.hi / mx * 100}% + 6px)">${fmt(Math.round(v.mean))}</span></div>`;
+    return `<div class="cmp-row"><div class="lab">${lab}</div><div class="bars">${bar(b, "base", "Age/sex rules")}${bar(f, "bayt", "S.C.O.P.E")}</div>
+      <div class="gain num">${g ? "×" + g.toFixed(1) : "new"}</div></div>`;
+  }).join("");
+  const feat = FEATURED.map((h, i) => {
+    const mem = h.members.map(m => P[m]);
+    const lines = [];
+    const rs = mem.flatMap(p => p.gaps.map(g => [p, g]));
+    const casc = rs.find(([, g]) => g.r.startsWith("CASCADE")); if (casc) lines.push(`${casc[0].first}: invited for family genetic follow-up`);
+    const mc = rs.find(([, g]) => g.r.startsWith("WCV-MCHAT")); if (mc) lines.push(`${mc[0].first} (${ageTxt(mc[0].age)}): ${mc[1].i}`);
+    const pg = rs.find(([, g]) => g.r === "PATHWAY-GAP"); if (pg) lines.push("No funded screening pathway: routed to community clinic");
+    const ad = rs.find(([p, g]) => p.age >= 18 && g.r.startsWith("IF-")); if (ad && lines.length < 3) lines.push(`${ad[0].first}: ${ad[1].i}`);
+    const story = ["Multigenerational Emirati family", "Expat family, minority language", "Worker in shared accommodation"][i];
+    return `<button class="feature" data-fam="${h.id}"><span class="eyebrow">${story}</span>
+      <span class="who">The ${esc(h.surname)} household</span>
+      <span class="small muted">${h.members.length} ${h.members.length > 1 ? "people" : "person"} · ${esc(h.district)}, ${esc(h.region)} · ${esc(h.lang)}</span>
+      <ul>${lines.slice(0, 3).map(l => `<li>${esc(l)}</li>`).join("")}</ul></button>`;
+  }).join("");
+  $("#v-overview").innerHTML = `
+  <div style="display:grid;gap:10px"><span class="eyebrow">Abu Dhabi · ${dateTxt(D.today)}</span>
+    <h2>One household, one plan, the right visit at the right time</h2>
+    <p class="lede">S.C.O.P.E reads care gaps from the Well-Child Visit and IFHAS standards, adds calibrated risk from clinical, genomic and family data, and turns the result into one coordinated Family Health Day per household, invited in the family's own language.</p></div>
+  <div class="kpis">
+    ${[[s.households, `Households · ${fmt(s.people)} people`], [s.people_with_gaps, "People with at least one care gap"], [s.overdue_wcv, "Overdue Well-Child Visits"],
+      [s.vax_gaps, "Children with a missing or due vaccine"], [s.mchat_gaps, "Missing or unreferred autism screens"], [s.undiagnosed_diabetes, "Adults with undiagnosed diabetes (hidden truth)"], [s.cascade_relatives, "Relatives eligible for family genetic follow-up"], [s.pathway_gap_adults, "Adults with no funded screening pathway"]]
+      .map(([v, l]) => `<div class="kpi"><span class="v">${fmt(v)}</span><span class="l">${l}</span></div>`).join("")}
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3>Same outreach budget, different results</h3>
+      <p class="small muted" style="margin-bottom:12px">600 people contacted in one 90-day cycle under each strategy. Mean of 200 simulated cycles, bars show the 95% interval.</p>
+      <div class="legend" style="margin-bottom:12px"><span><i style="background:var(--base)"></i>Current age/sex rules</span><span><i style="background:var(--teal)"></i>S.C.O.P.E</span></div>
+      <div class="cmp">${cmp}</div>
+      <p class="tiny muted" style="margin-top:12px">With tailoring effects halved, S.C.O.P.E still reaches ×${(S.bayt_full_half_effects.true_high_risk_reached.mean / B.true_high_risk_reached.mean).toFixed(1)} as many high-risk people. <a href="#outcomes">See all strategies and assumptions</a>.</p>
+    </div>
+    <div style="display:grid;gap:12px;align-content:start"><h3>Walk through a family</h3>${feat}</div>
+  </div>`;
+  document.querySelectorAll("#v-overview [data-fam]").forEach(b => b.onclick = () => openFamily(b.dataset.fam));
+}
+
+/* ================= WORKLIST ================= */
+const WL = {region: "", group: "", lang: "", conf: "", sel: "selected", q: "", limit: 60};
+function renderWorklist() {
+  const opts = (k, vals) => `<option value="">All</option>` + vals.map(v => `<option ${WL[k] === v ? "selected" : ""}>${esc(v)}</option>`).join("");
+  const uniq = k => [...new Set(D.households.map(h => h[k]))].sort();
+  let rows = D.households.filter(h => h.n_gaps && h.priority > 0);
+  if (WL.region) rows = rows.filter(h => h.region === WL.region);
+  if (WL.group) rows = rows.filter(h => h.group === WL.group);
+  if (WL.lang) rows = rows.filter(h => h.lang === WL.lang);
+  if (WL.sel === "selected") rows = rows.filter(h => h.selected);
+  if (WL.q) rows = rows.filter(h => (h.surname + " " + h.district).toLowerCase().includes(WL.q.toLowerCase()));
+  rows = rows.map(h => ({h, pr: hhPriority(h)})).sort((a, b) => b.pr - a.pr);
+  const people = rows.reduce((s, r) => s + r.h.members.filter(m => visibleGaps(P[m]).length).length, 0);
+  const minConf = h => { const order = ["insufficient data", "low", "medium", "high"]; return h.members.map(m => live(P[m]).confidence).sort((a, b) => order.indexOf(a) - order.indexOf(b))[0]; };
+  const body = rows.slice(0, WL.limit).map(({h, pr}, i) => {
+    const gaps = h.members.flatMap(m => visibleGaps(P[m]));
+    const over = gaps.filter(g => g.s === "overdue" || g.s === "never").length, risk = gaps.filter(g => g.s === "risk-based").length;
+    return `<tr class="click" data-fam="${h.id}"><td class="num">${i + 1}</td>
+      <td><b>${esc(h.surname)}</b><div class="tiny muted">${esc(h.group)} · ${esc(h.lang)}</div></td>
+      <td>${esc(h.district)}<div class="tiny muted">${esc(h.region)}</div></td>
+      <td class="r num">${h.members.length}</td>
+      <td>${over ? `<span class="chip c-over">${over} overdue</span> ` : ""}${risk ? `<span class="chip c-risk">${risk} risk-based</span>` : ""}</td>
+      <td><div class="pbar" data-tip="Priority ${pr.toFixed(1)}"><i style="width:${Math.min(100, pr / rows[0].pr * 100)}%"></i></div></td>
+      <td>${confB(minConf(h))}</td>
+      <td class="small">${h.slot ? `${dateTxt(h.slot.date).split(",").slice(0, 2).join(",")}<div class="tiny muted">${esc(h.slot.time)}</div>` : "–"}</td>
+      <td class="small">${esc(h.channel)}</td></tr>`;
+  }).join("");
+  $("#v-worklist").innerHTML = `
+  <div style="display:grid;gap:8px"><span class="eyebrow">Outreach worklist</span><h2>Who to invite first this cycle</h2>
+  <p class="lede">Households ranked by preventable need: overdue guideline items, weighted by calibrated risk and by how unlikely the family is to come without help. The default view shows the 600-person cycle allocated with a language-level equity floor.</p></div>
+  <div class="filters">
+    <label>Search<input type="search" id="wl-q" value="${esc(WL.q)}" placeholder="Family or district"></label>
+    <label>Region<select id="wl-region">${opts("region", uniq("region"))}</select></label>
+    <label>Nationality group<select id="wl-group">${opts("group", uniq("group"))}</select></label>
+    <label>Language<select id="wl-lang">${opts("lang", uniq("lang"))}</select></label>
+    <label>Scope<select id="wl-sel"><option value="selected" ${WL.sel === "selected" ? "selected" : ""}>This cycle (600 people)</option><option value="" ${WL.sel === "" ? "selected" : ""}>All households with gaps</option></select></label>
+    <span class="small muted num" style="margin-left:auto">${fmt(rows.length)} households · ${fmt(people)} people with an open item</span>
+  </div>
+  <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Household</th><th>Area</th><th class="r">People</th><th>Open items</th><th>Priority</th><th>Lowest confidence</th><th>Family Health Day</th><th>Channel</th></tr></thead>
+  <tbody>${body || `<tr><td colspan="9" class="muted">No households match these filters.</td></tr>`}</tbody></table></div>
+  ${rows.length > WL.limit ? `<button class="btn ghost" id="wl-more" style="justify-self:start">Show 60 more</button>` : ""}`;
+  for (const k of ["region", "group", "lang", "sel"]) $("#wl-" + k).onchange = e => { WL[k] = e.target.value; WL.limit = 60; renderWorklist(); };
+  $("#wl-q").oninput = e => { WL.q = e.target.value; clearTimeout(WL.t); WL.t = setTimeout(() => { renderWorklist(); const i = $("#wl-q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 250); };
+  const more = $("#wl-more"); if (more) more.onclick = () => { WL.limit += 60; renderWorklist(); };
+  document.querySelectorAll("#v-worklist tr[data-fam]").forEach(r => r.onclick = () => openFamily(r.dataset.fam));
+}
+
+/* ================= FAMILY ================= */
+function openFamily(id) { currentFamily = id; location.hash = "family-" + id; }
+
+function familyGraph(h) {
+  const mem = h.members.map(m => P[m]);
+  const gen = p => p.role.startsWith("grand") ? 0 : p.role === "child" ? 2 : 1;
+  const rows = [[], [], []]; mem.forEach(p => rows[gen(p)].push(p));
+  const W = 520, rowY = [60, 180, 310], R = 26, pos = {};
+  rows.forEach((r, gi) => r.forEach((p, i) => { pos[p.id] = {x: W / (r.length + 1) * (i + 1), y: rowY[gi]}; }));
+  const used = rows.filter(r => r.length).length, H = rows[2].length ? 380 : rows[1].length ? 250 : 130;
+  const status = p => { const g = live(p).gaps; return g.some(x => x.s === "overdue" || x.s === "never") ? "var(--red)" : g.some(x => x.s === "risk-based") ? "var(--teal)" : g.some(x => x.s === "due") ? "var(--amber)" : g.length ? "var(--muted)" : "var(--good)"; };
+  let edges = "";
+  for (const p of mem) for (const k of ["mother", "father"]) if (p[k] && pos[p[k]]) {
+    const a = pos[p[k]], b = pos[p.id];
+    edges += `<path d="M${a.x},${a.y + R} C${a.x},${(a.y + b.y) / 2} ${b.x},${(a.y + b.y) / 2} ${b.x},${b.y - R}" fill="none" stroke="var(--line)" stroke-width="2"/>`;
+  }
+  const fa = mem.find(p => p.role === "father"), mo = mem.find(p => p.role === "mother");
+  if (fa && mo) edges += `<line x1="${pos[fa.id].x + R}" y1="${pos[fa.id].y}" x2="${pos[mo.id].x - R}" y2="${pos[mo.id].y}" stroke="var(--line)" stroke-width="2"${h.consang ? ' stroke-dasharray="1 0"' : ""}/>` +
+    (h.consang && C(fa.id).family_link && C(mo.id).family_link ? `<text x="${(pos[fa.id].x + pos[mo.id].x) / 2}" y="${pos[fa.id].y - 8}" text-anchor="middle" font-size="10" fill="var(--muted)">related parents</text>` : "");
+  let casc = "";
+  for (const p of mem) for (const g of live(p).gaps) if (g.r.startsWith("CASCADE") && g.via && pos[g.via]) {
+    const a = pos[g.via], b = pos[p.id], mx = (a.x + b.x) / 2 + (a.y === b.y ? 0 : 40), my = (a.y + b.y) / 2 - (a.y === b.y ? 46 : 0);
+    casc += `<path d="M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}" fill="none" stroke="var(--teal)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr)" opacity=".9"><title>Family follow-up offered via an index-mediated letter. The relative's own result is never disclosed.</title></path>`;
+  }
+  const nodes = mem.map(p => {
+    const q = pos[p.id], col = status(p), lv = live(p);
+    return `<g class="node" data-person="${p.id}" style="cursor:pointer" tabindex="0" role="button" aria-label="${esc(p.first)}">
+      <circle cx="${q.x}" cy="${q.y}" r="${R}" fill="var(--surface)" stroke="${col}" stroke-width="4"/>
+      <text x="${q.x}" y="${q.y + 6}" text-anchor="middle" font-size="17" font-family="Reem Kufi, sans-serif" fill="var(--ink)">${esc(p.first[0])}</text>
+      ${lv.gaps.length ? `<circle cx="${q.x + 19}" cy="${q.y - 19}" r="10" fill="${col}"/><text x="${q.x + 19}" y="${q.y - 15}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--surface)">${lv.gaps.length}</text>` : ""}
+      <text x="${q.x}" y="${q.y + R + 16}" text-anchor="middle" font-size="12" fill="var(--ink)">${esc(p.first)}</text>
+      <text x="${q.x}" y="${q.y + R + 30}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${ROLE[p.role]} · ${ageTxt(p.age)}</text></g>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Family graph"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--teal)"/></marker></defs>${edges}${casc}${nodes}</svg>
+  <div class="legend tiny" style="margin-top:8px"><span><i style="background:var(--red)"></i>Overdue item</span><span><i style="background:var(--teal)"></i>Risk-based pathway</span><span><i style="background:var(--amber)"></i>Due soon</span><span><i style="background:var(--good)"></i>Up to date</span><span>- - - family genetic follow-up</span></div>`;
+}
+
+function riskBlock(p, lv) {
+  if (!p.score) return "";
+  const m = M[p.score.model], mx = Math.max(.35, lv.hi * 1.15), x = v => Math.min(100, v / mx * 100);
+  const what = p.score.model === "adult" ? "3-year cardiometabolic risk" : "Developmental concern risk";
+  const facs = lv.factors.map(([lab, v]) => {
+    const w = Math.min(50, Math.abs(v) / 1.6 * 50);
+    return `<div class="factor"><span>${esc(lab)}</span><span class="fb" data-tip="${v > 0 ? "Raises" : "Lowers"} the score (log-odds ${v.toFixed(2)})"><i style="${v > 0 ? `left:50%;width:${w}%;background:var(--red)` : `right:50%;width:${w}%;background:var(--teal)`}"></i></span></div>`;
+  }).join("");
+  return `<div class="riskbox"><div><span class="eyebrow">${what}</span>
+      <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:var(--f-display);font-size:1.5rem" class="num">${pct(lv.risk, 1)}</span>
+      <span class="small muted num">${lv.rr.toFixed(1)}× population average</span></div>
+      <div class="rscale" data-tip="Point estimate with 90% bootstrap interval; the grey tick is the population average">
+        <div class="track"></div><div class="iv" style="left:${x(lv.lo)}%;width:${x(lv.hi) - x(lv.lo)}%"></div>
+        <div class="avg" style="left:${x(m.prevalence)}%"></div><div class="pt" style="left:${x(lv.risk)}%"></div></div>
+      <div class="tiny muted num">Interval ${pct(lv.lo, 1)}–${pct(lv.hi, 1)} · data completeness ${pct(lv.completeness)}</div></div>
+    <div style="display:grid;gap:5px;align-content:start"><span class="eyebrow">Main factors behind the score</span>${facs || `<span class="small muted">No factor moves the score much.</span>`}
+      <span class="tiny muted">Red raises the score, teal lowers it.</span></div></div>`;
+}
+
+function memberCard(p) {
+  const lv = live(p), c = C(p.id), meta = D.gap_meta;
+  const gaps = lv.gaps.map(g => {
+    const mt = meta[g.r] || {};
+    const via = g.via && P[g.via] ? ` Offered because a close relative agreed to share a family letter.` : "";
+    return `<li>${chip(g.s)}<span>${esc(g.i)}${g.s === "overdue" && g.d > 0 ? ` <span class="tiny muted num">· ${g.d} days late</span>` : ""}</span>
+      <span class="src">${esc(mt.source || "")}${mt.followup ? " · Follow-up: " + esc(mt.followup) : ""}${mt.note ? " · " + esc(mt.note) : ""}${via}</span></li>`;
+  }).join("");
+  const REAL_BARRIERS = ["Preferred language not Arabic/English", "Distance to clinic", "Shift work", "Previous missed appointments"];
+  const bar = p.barriers.map(([i]) => L[i]).filter(l => REAL_BARRIERS.includes(l)).join(", ");
+  const toggles = CONSENT_KEYS.map(k => {
+    const dis = k === "genomic" && !p.genomic_available;
+    return `<label class="tog" ${dis ? 'data-tip="No genomic result on record for this person"' : ""}><input type="checkbox" id="c-${p.id}-${k}" data-p="${p.id}" data-k="${k}" ${c[k] ? "checked" : ""} ${dis ? "disabled" : ""}>${CONSENT_LABEL[k]}</label>`;
+  }).join("");
+  const gen = p.genomic && p.genomic.length && c.genomic ? `<span class="chip c-risk" data-tip="Consented genomic result used for family follow-up only">Genomic result on file</span>` : "";
+  return `<div class="member" id="m-${p.id}"><div class="mhead"><div><span class="nm">${esc(nameOf(p))}</span>
+      <span class="small muted"> · ${ROLE[p.role]}, ${ageTxt(p.age)} · ${p.sex === "F" ? "female" : "male"}</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${gen}${confB(lv.confidence)}</div></div>
+    ${lv.gaps.length ? `<ul class="gaps">${gaps}</ul>` : `<span class="chip c-ok">Up to date</span>`}
+    ${riskBlock(p, lv)}
+    ${lv.gaps.length ? `<p class="small">${bar ? `<span class="muted">Why ${esc(p.first)} might not come without help:</span> ${esc(bar)}. ` : ""}<span class="muted num">Estimated attendance with a standard invitation: ${pct(p.p_attend)}.</span></p>` : ""}
+    <div class="consent" aria-label="Data use choices for ${esc(p.first)}">${toggles}</div>
+    ${changedConsent(p.id) ? `<span class="change">Choices changed: scores and invitations recalculated${!c.outreach ? ". This person will not be contacted." : ""}</span>` : ""}
+  </div>`;
+}
+
+function familyPlan(h) {
+  const mem = h.members.map(m => P[m]).filter(p => live(p).gaps.length && C(p.id).outreach);
+  const cp = P[h.contact];
+  if (!mem.length) return `<div class="plan"><span class="eyebrow">Family Health Day</span><p>No open items for this household under the current choices.</p></div>`;
+  const items = mem.map(p => `<li><b>${esc(p.first)}</b>: ${live(p).gaps.filter(g => g.s !== "system").map(g => esc(g.i.replace(/ \(.*?\)$/, ""))).join("; ") || "community health check"}</li>`).join("");
+  return `<div class="plan"><span class="eyebrow">Proposed Family Health Day</span>
+    <span class="when">${h.slot ? dateTxt(h.slot.date) + " · " + esc(h.slot.time) : "To be scheduled"}</span>
+    <span class="small">${esc(h.district)} ${h.housing === "labour accommodation" ? "mobile clinic stop" : "Healthcare Centre"} · ${mem.length} ${mem.length > 1 ? "people in one visit" : "person"}</span>
+    <ul>${items}</ul>
+    ${h.slot && h.slot.why.length ? `<p class="tiny">Timing: ${esc(h.slot.why.join("; "))}.</p>` : ""}
+    <p class="small">Invitation to <b>${esc(cp.first)}</b> (${esc(h.audience)}) by ${esc(h.channel.toLowerCase())}, in ${esc(h.lang)}.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="to-msg">See it on the family's phone</button></div></div>`;
+}
+
+function renderFamily() {
+  const h = HH[currentFamily] || FEATURED[0];
+  if (!h) return;
+  const mem = h.members.map(m => P[m]);
+  const opts = FEATURED.map(f => `<option value="${f.id}" ${f.id === h.id ? "selected" : ""}>${esc(f.surname)} household (featured)</option>`).join("") +
+    D.households.filter(x => x.selected && !FEATURED.includes(x)).slice(0, 40).map(x => `<option value="${x.id}" ${x.id === h.id ? "selected" : ""}>${esc(x.surname)} · ${esc(x.district)} (#${x.rank})</option>`).join("");
+  $("#v-family").innerHTML = `
+  <div class="fam-head"><div style="display:grid;gap:6px"><span class="eyebrow">Family view · household ${h.id}</span>
+      <h2>The ${esc(h.surname)} household</h2>
+      <div class="meta"><span class="chip c-sys">${esc(h.group)}</span><span class="chip c-sys">${esc(h.district)}, ${esc(h.region)}</span><span class="chip c-sys">${esc(h.lang)}</span><span class="chip c-sys">${esc(h.insurance)} cover</span><span class="chip c-sys num">${h.dist_km} km to clinic</span></div></div>
+    <label class="small muted" style="display:grid;gap:3px">Open another household<select id="fam-pick">${opts}</select></label></div>
+  <div class="fam-grid">
+    <div style="display:grid;gap:16px">
+      <div class="panel graph"><h3>Family graph</h3>${familyGraph(h)}</div>
+      ${familyPlan(h)}
+      <p class="disclaimer">S.C.O.P.E decides who is invited first and which guideline pathway applies. It does not diagnose. The clinician at the visit makes every clinical decision.</p>
+    </div>
+    <div class="panel"><h3 style="margin-bottom:4px">Members</h3><p class="small muted" style="margin-bottom:14px">Switch a data-use choice to see how the score, its confidence and the invitations change. Changes stay on this screen only.</p>
+      ${mem.map(memberCard).join("")}</div>
+  </div>`;
+  $("#fam-pick").onchange = e => openFamily(e.target.value);
+  const tm = $("#to-msg"); if (tm) tm.onclick = () => { faInit(h); location.hash = "family-app"; };
+  document.querySelectorAll("#v-family .node").forEach(n => { const go = () => $("#m-" + n.dataset.person).scrollIntoView({behavior: "smooth", block: "start"}); n.onclick = go; n.onkeydown = e => { if (e.key === "Enter") go(); }; });
+  document.querySelectorAll("#v-family .tog input").forEach(i => i.onchange = () => { C(i.dataset.p)[i.dataset.k] = i.checked; const y = scrollY; renderFamily(); scrollTo(0, y); });
+}
+
+/* ================= MESSAGES ================= */
+const LANGS = {English: "en", Arabic: "ar", Urdu: "ur", Hindi: "hi", Malayalam: "ml", Tagalog: "fil", Bengali: "bn"};
+const LOCALE = {en: "en-GB", ar: "ar-AE", ur: "ur-PK", hi: "hi-IN", ml: "ml-IN", fil: "fil-PH", bn: "bn-BD"};
+const T = {
+  en: {parent: "Hello {name}, this is Abu Dhabi Public Health Centre. {n} members of your family are due for routine preventive check-ups. We have reserved one Family Health Day for all of you: {date} at {time}, {clinic}. One trip, one visit for everyone.",
+       adult: "Hello {name}, this is Abu Dhabi Public Health Centre. You are due for a routine preventive health check. We have reserved a time for you: {date} at {time}, {clinic}.",
+       elder: "Peace be upon you, {name}. This is Abu Dhabi Public Health Centre. To take care of your family's health, we would like to offer one combined visit for {n} members of your family on {date} at {time}, {clinic}.",
+       community: "Hello {name}, this is Abu Dhabi Public Health Centre. A mobile health clinic will visit {clinic} on {date} at {time} for health checks (blood pressure, blood sugar).",
+       opts: ["Confirm", "Another time", "Talk to my doctor first", "Stop messages"]},
+  ar: {parent: "مرحباً {name}، معك مركز أبوظبي للصحة العامة. حان موعد الفحوصات الوقائية الدورية لـ {n} من أفراد أسرتك. حجزنا لكم يوماً صحياً عائلياً واحداً: {date} الساعة {time}، {clinic}. زيارة واحدة للجميع.",
+       adult: "مرحباً {name}، معك مركز أبوظبي للصحة العامة. حان موعد فحصك الصحي الوقائي الدوري. حجزنا لك موعداً: {date} الساعة {time}، {clinic}.",
+       elder: "السلام عليكم {name}، معك مركز أبوظبي للصحة العامة. حرصاً على صحة أسرتكم الكريمة، يسعدنا أن نقدّم زيارة واحدة مشتركة لـ {n} من أفراد الأسرة يوم {date} الساعة {time}، {clinic}.",
+       community: "مرحباً {name}، معك مركز أبوظبي للصحة العامة. ستزور عيادة صحية متنقلة {clinic} يوم {date} الساعة {time} لإجراء فحوصات صحية (ضغط الدم، السكر).",
+       opts: ["تأكيد", "موعد آخر", "أتحدث مع طبيبي أولاً", "إيقاف الرسائل"]},
+  ur: {parent: "السلام علیکم {name}، یہ ابوظہبی پبلک ہیلتھ سینٹر ہے۔ آپ کے خاندان کے {n} افراد کے معمول کے احتیاطی طبی معائنے کا وقت ہو گیا ہے۔ ہم نے آپ سب کے لیے ایک فیملی ہیلتھ ڈے مخصوص کیا ہے: {date}، {time}، {clinic}۔ سب کے لیے ایک ہی ملاقات۔",
+       adult: "السلام علیکم {name}، یہ ابوظہبی پبلک ہیلتھ سینٹر ہے۔ آپ کے معمول کے احتیاطی طبی معائنے کا وقت ہو گیا ہے۔ ہم نے آپ کے لیے وقت مخصوص کیا ہے: {date}، {time}، {clinic}۔",
+       community: "السلام علیکم {name}، یہ ابوظہبی پبلک ہیلتھ سینٹر ہے۔ ایک موبائل ہیلتھ کلینک {date} کو {time} بجے {clinic} آئے گا، جہاں طبی معائنہ (بلڈ پریشر، شوگر) ہوگا۔",
+       opts: ["تصدیق", "دوسرا وقت", "پہلے ڈاکٹر سے بات", "پیغامات بند"]},
+  hi: {parent: "नमस्ते {name}, यह अबू धाबी पब्लिक हेल्थ सेंटर है। आपके परिवार के {n} सदस्यों की नियमित निवारक स्वास्थ्य जाँच का समय हो गया है। हमने आप सभी के लिए एक फ़ैमिली हेल्थ डे आरक्षित किया है: {date}, {time}, {clinic}। सबके लिए एक ही विज़िट।",
+       adult: "नमस्ते {name}, यह अबू धाबी पब्लिक हेल्थ सेंटर है। आपकी नियमित निवारक स्वास्थ्य जाँच का समय हो गया है। हमने आपके लिए समय आरक्षित किया है: {date}, {time}, {clinic}।",
+       community: "नमस्ते {name}, यह अबू धाबी पब्लिक हेल्थ सेंटर है। एक मोबाइल हेल्थ क्लिनिक {date} को {time} बजे {clinic} आएगा, जहाँ स्वास्थ्य जाँच (ब्लड प्रेशर, शुगर) होगी।",
+       opts: ["पुष्टि करें", "दूसरा समय", "पहले डॉक्टर से बात", "संदेश बंद करें"]},
+  ml: {parent: "നമസ്കാരം {name}, ഇത് അബുദാബി പബ്ലിക് ഹെൽത്ത് സെന്ററാണ്. നിങ്ങളുടെ കുടുംബത്തിലെ {n} പേരുടെ പതിവ് പ്രതിരോധ ആരോഗ്യ പരിശോധനയ്ക്ക് സമയമായി. നിങ്ങൾക്കെല്ലാവർക്കുമായി ഒരു ഫാമിലി ഹെൽത്ത് ഡേ ബുക്ക് ചെയ്തിട്ടുണ്ട്: {date}, {time}, {clinic}. എല്ലാവർക്കും ഒരൊറ്റ സന്ദർശനം.",
+       adult: "നമസ്കാരം {name}, ഇത് അബുദാബി പബ്ലിക് ഹെൽത്ത് സെന്ററാണ്. നിങ്ങളുടെ പതിവ് പ്രതിരോധ ആരോഗ്യ പരിശോധനയ്ക്ക് സമയമായി. നിങ്ങൾക്കായി ഒരു സമയം ബുക്ക് ചെയ്തിട്ടുണ്ട്: {date}, {time}, {clinic}.",
+       community: "നമസ്കാരം {name}, ഇത് അബുദാബി പബ്ലിക് ഹെൽത്ത് സെന്ററാണ്. ഒരു മൊബൈൽ ഹെൽത്ത് ക്ലിനിക് {date} ന് {time} ന് {clinic} ൽ എത്തും, ആരോഗ്യ പരിശോധന (രക്തസമ്മർദ്ദം, പ്രമേഹം) ലഭ്യമാണ്.",
+       opts: ["സ്ഥിരീകരിക്കുക", "മറ്റൊരു സമയം", "ആദ്യം ഡോക്ടറുമായി സംസാരിക്കണം", "സന്ദേശങ്ങൾ നിർത്തുക"]},
+  fil: {parent: "Magandang araw, {name}! Ito ang Abu Dhabi Public Health Centre. Oras na para sa regular na preventive check-up ng {n} miyembro ng inyong pamilya. Nag-reserve kami ng isang Family Health Day para sa inyong lahat: {date}, {time}, {clinic}. Isang punta lang para sa lahat.",
+        adult: "Magandang araw, {name}! Ito ang Abu Dhabi Public Health Centre. Oras na para sa inyong regular na preventive health check. Nag-reserve kami ng oras para sa inyo: {date}, {time}, {clinic}.",
+        community: "Magandang araw, {name}! Ito ang Abu Dhabi Public Health Centre. Bibisita ang isang mobile health clinic sa {clinic} sa {date}, {time}, para sa health check (blood pressure, blood sugar).",
+        opts: ["Kumpirmahin", "Ibang oras", "Kausapin muna ang doktor", "Huminto"]},
+  bn: {parent: "আসসালামু আলাইকুম {name}, এটি আবুধাবি পাবলিক হেলথ সেন্টার। আপনার পরিবারের {n} জন সদস্যের নিয়মিত প্রতিরোধমূলক স্বাস্থ্য পরীক্ষার সময় হয়েছে। আমরা আপনাদের সবার জন্য একটি ফ্যামিলি হেলথ ডে সংরক্ষণ করেছি: {date}, {time}, {clinic}। সবার জন্য একবারই আসা।",
+       adult: "আসসালামু আলাইকুম {name}, এটি আবুধাবি পাবলিক হেলথ সেন্টার। আপনার নিয়মিত প্রতিরোধমূলক স্বাস্থ্য পরীক্ষার সময় হয়েছে। আমরা আপনার জন্য একটি সময় সংরক্ষণ করেছি: {date}, {time}, {clinic}।",
+       community: "আসসালামু আলাইকুম {name}, এটি আবুধাবি পাবলিক হেলথ সেন্টার। একটি মোবাইল হেলথ ক্লিনিক {date} তারিখে {time} সময়ে {clinic} আসবে, স্বাস্থ্য পরীক্ষা (রক্তচাপ, ডায়াবেটিস) হবে।",
+       opts: ["নিশ্চিত করুন", "অন্য সময়", "আগে ডাক্তারের সাথে কথা", "বার্তা বন্ধ"]},
+};
+/* ================= FAMILY EXPERIENCE (WhatsApp + secure mini-app) ================= */
+const CHAT = {
+  en: {link: "Your family plan is ready. Open it securely with UAE PASS:",
+       confirmed: "Confirmed: {date} at {time}, {clinic}. We will remind you the day before. Reply 2 at any time to change.",
+       choose: "Here are three other times. Tap one:",
+       doctor: "Your family doctor's team at {clinic} will call you within 2 working days. Your booking is kept until then.",
+       stop: "You will not receive further invitations. Reply START at any time to restart.",
+       reminder: "Reminder: tomorrow at {time}, {clinic}. Please bring an Emirates ID for each person and your child health record if you have one. Reply 2 to change.",
+       checkin: "Welcome. Everyone in your family plan is checked in together. Show this code at reception:",
+       after: "Thank you for coming today. Your doctor will share any results with you directly. We will remind you before {name}'s next check in {months}.",
+       months: m => m >= 12 ? `${Math.round(m / 12)} year${Math.round(m / 12) > 1 ? "s" : ""}` : `${m} month${m > 1 ? "s" : ""}`,
+       opts: ["Confirm", "Another time", "Talk to my doctor first", "Stop messages"]},
+  ar: {link: "خطة أسرتك الصحية جاهزة. افتحها بأمان عبر الهوية الرقمية UAE PASS:",
+       confirmed: "تم التأكيد: {date} الساعة {time}، {clinic}. سنذكّرك قبل الموعد بيوم. أرسل 2 في أي وقت لتغيير الموعد.",
+       choose: "إليك ثلاثة مواعيد أخرى، اختر واحداً:",
+       doctor: "سيتصل بك فريق طبيب الأسرة في {clinic} خلال يومي عمل، وسيبقى حجزك قائماً حتى ذلك الحين.",
+       stop: "لن تصلك دعوات أخرى. أرسل «ابدأ» في أي وقت لإعادة الاشتراك.",
+       reminder: "تذكير: غداً الساعة {time}، {clinic}. يرجى إحضار الهوية الإماراتية لكل فرد وسجل صحة الطفل إن وجد. أرسل 2 لتغيير الموعد.",
+       checkin: "أهلاً بكم. يتم تسجيل وصول جميع أفراد الأسرة معاً. أظهر هذا الرمز في الاستقبال:",
+       after: "شكراً لحضوركم اليوم. سيشارككم الطبيب أي نتائج مباشرة. سنذكّركم قبل الفحص القادم لـ{name} بعد {months}.",
+       months: m => { const arN = (n, one, two, few, many) => n === 1 ? one : n === 2 ? two : n <= 10 ? `${n} ${few}` : `${n} ${many}`; return m >= 12 ? arN(Math.round(m / 12), "سنة", "سنتين", "سنوات", "سنة") : arN(m, "شهر", "شهرين", "أشهر", "شهراً"); },
+       opts: ["تأكيد", "موعد آخر", "أتحدث مع طبيبي أولاً", "إيقاف الرسائل"]},
+};
+const UI = {
+  en: {app: "S.C.O.P.E Family", tagline: "Your family's preventive care plan", signin: "Sign in with UAE PASS", simulated: "Simulated sign-in for this demo",
+       privacy: "Health details are never sent by WhatsApp. You see them here, after you sign in.", hello: "Hello, {name}", fhd: "Family Health Day",
+       booked: "Booked", notBooked: "Not confirmed yet", confirm: "Confirm this time", change: "Choose another time", people: "{n} people · one visit",
+       who: "Who is coming", checks: n => `${n} check${n > 1 ? "s" : ""}`, upToDate: "Up to date", choices: "Data choices", letter: "Family letter",
+       back: "Back", atVisit: "At this visit", doctorNote: "Your doctor explains any results in person. This app never shows risk scores.",
+       choicesIntro: "Choose which information may be used to plan your family's prevention. You can change this at any time.", managedBy: "Managed by {name} in their own app",
+       c_genomic: "Genetic results", c_family_link: "Family links", c_social: "Home and work context", c_outreach: "Invitations",
+       d_genomic: "Used only to invite close relatives to counselling, through a letter you choose to send.",
+       d_family_link: "Lets us plan one visit for the whole family and use family health history.",
+       d_social: "Language, distance and working hours, to choose a good time and channel.", d_outreach: "Turn off to stop all invitations.",
+       saved: "Saved. Your care team sees the change now.", times: "Choose a time", callMe: "Talk to my doctor first",
+       callReq: "Call-back requested. Your family doctor's team will call within 2 working days.", bring: "What to bring",
+       bringList: ["An Emirates ID for each person", "Child health record, if you have one", "No fasting needed unless your doctor asked"],
+       letterIntro: "Your genetic result can help close relatives protect their health. The clinic can send them a letter inviting them to genetic counselling. The letter does not include your result.",
+       letterIntroOther: "{name}'s genetic result can help close relatives protect their health. As {name}'s parent, you can ask the clinic to send them a letter inviting them to genetic counselling. The letter does not include {name}'s result.",
+       letterPick: "Who should receive a letter?", send: "Send letters", sent: "Letters sent. Each relative decides for themselves.",
+       received: "You received a family letter", receivedTxt: "A close relative asked the clinic to invite you to genetic counselling. Their result is not shared with you.",
+       home: "Home", visit: "Visit", stopped: "Invitations are off. Turn them on in Data choices.", nothing: "Nothing is due for your family right now.",
+       roles: {father: "Father", mother: "Mother", grandmother: "Grandmother", grandfather: "Grandfather", child: "Child", self: "You"},
+       age: a => a < 2 ? `${Math.round(a * 12)} months` : `${Math.floor(a)} years`, you: "you",
+       rel: {son: "Your son", daughter: "Your daughter", grandson: "Your grandson", granddaughter: "Your granddaughter", husband: "Your husband", wife: "Your wife", mother: "Your mother", father: "Your father"}},
+  ar: {app: "سكوب للأسرة", tagline: "خطة الرعاية الوقائية لأسرتك", signin: "تسجيل الدخول عبر UAE PASS", simulated: "تسجيل دخول تجريبي لهذا العرض",
+       privacy: "لا نرسل أي تفاصيل صحية عبر واتساب. تراها هنا فقط بعد تسجيل الدخول.", hello: "مرحباً، {name}", fhd: "اليوم الصحي العائلي",
+       booked: "محجوز", notBooked: "لم يتم التأكيد بعد", confirm: "تأكيد هذا الموعد", change: "اختيار موعد آخر", people: "{n} أفراد · زيارة واحدة",
+       who: "من سيحضر", checks: n => `${n} ${n > 2 && n < 11 ? "فحوصات" : "فحص"}`, upToDate: "لا يحتاج فحوصات الآن", choices: "خيارات البيانات", letter: "الرسالة العائلية",
+       back: "رجوع", atVisit: "في هذه الزيارة", doctorNote: "يشرح لك الطبيب أي نتائج شخصياً، ولا يعرض هذا التطبيق أي درجات للمخاطر.",
+       choicesIntro: "اختر المعلومات التي يمكن استخدامها لتخطيط الوقاية لأسرتك، ويمكنك تغيير ذلك في أي وقت.", managedBy: "يديرها {name} من تطبيقه الخاص",
+       c_genomic: "النتائج الوراثية", c_family_link: "الروابط العائلية", c_social: "السياق المنزلي والعملي", c_outreach: "الدعوات",
+       d_genomic: "تُستخدم فقط لدعوة الأقارب المقربين إلى الاستشارة، عبر رسالة تختار إرسالها.",
+       d_family_link: "تتيح لنا تخطيط زيارة واحدة للأسرة كلها واستخدام التاريخ الصحي العائلي.",
+       d_social: "اللغة والمسافة وساعات العمل، لاختيار الوقت والوسيلة المناسبين.", d_outreach: "أوقفها لإيقاف جميع الدعوات.",
+       saved: "تم الحفظ. يرى فريق الرعاية التغيير الآن.", times: "اختر موعداً", callMe: "أريد التحدث مع طبيبي أولاً",
+       callReq: "تم طلب الاتصال. سيتصل بك فريق طبيب الأسرة خلال يومي عمل.", bring: "ما الذي تحضره",
+       bringList: ["الهوية الإماراتية لكل فرد", "سجل صحة الطفل إن وجد", "لا حاجة للصيام إلا إذا طلب الطبيب ذلك"],
+       letterIntro: "يمكن أن تساعد نتيجتك الوراثية أقاربك المقربين على حماية صحتهم. يمكن للعيادة أن ترسل لهم رسالة تدعوهم إلى استشارة وراثية، ولا تتضمن الرسالة نتيجتك.",
+       letterIntroOther: "يمكن أن تساعد النتيجة الوراثية لـ{name} الأقارب المقربين على حماية صحتهم. بصفتك ولي الأمر، يمكنك أن تطلب من العيادة إرسال رسالة تدعوهم إلى استشارة وراثية، ولا تتضمن الرسالة نتيجة {name}.",
+       letterPick: "من يجب أن يستلم الرسالة؟", send: "إرسال الرسائل", sent: "تم إرسال الرسائل. يقرر كل قريب بنفسه.",
+       received: "وصلتك رسالة عائلية", receivedTxt: "طلب أحد أقاربك المقربين من العيادة دعوتك إلى استشارة وراثية، ولا تتم مشاركة نتيجته معك.",
+       home: "الرئيسية", visit: "الزيارة", stopped: "الدعوات متوقفة. يمكنك تفعيلها من خيارات البيانات.", nothing: "لا توجد فحوصات مستحقة لأسرتك الآن.",
+       roles: {father: "الأب", mother: "الأم", grandmother: "الجدة", grandfather: "الجد", child: "طفل", self: "أنت"},
+       age: a => { const n = a < 2 ? Math.round(a * 12) : Math.floor(a); const w = a < 2 ? (n <= 10 && n > 2 ? "أشهر" : "شهراً") : (n <= 10 && n > 2 ? "سنوات" : "سنة"); return `${n} ${w}`; }, you: "أنت",
+       rel: {son: "ابنك", daughter: "ابنتك", grandson: "حفيدك", granddaughter: "حفيدتك", husband: "زوجك", wife: "زوجتك", mother: "والدتك", father: "والدك"}},
+};
+const PLAIN = {
+  "VAX": ["Vaccines due under the national schedule", "تطعيمات مستحقة وفق البرنامج الوطني"],
+  "SCH-ANNUAL": ["Yearly school health check", "الفحص الصحي المدرسي السنوي"],
+  "WCV-VISIT": ["Routine child check: growth, development and vaccines", "فحص الطفل الدوري: النمو والتطور والتطعيمات"],
+  "WCV-MCHAT-18": ["Development questionnaire for toddlers", "استبيان نمو الطفل في سن مبكرة"],
+  "WCV-MCHAT-24": ["Development questionnaire for toddlers", "استبيان نمو الطفل في سن مبكرة"],
+  "WCV-MCHAT-REF": ["Follow-up appointment with a child development team", "موعد متابعة مع فريق نمو الطفل"],
+  "WCV-CBC-12": ["Small blood test for iron levels", "فحص دم بسيط لمستوى الحديد"],
+  "EARLY-CBC": ["Small blood test for iron levels", "فحص دم بسيط لمستوى الحديد"],
+  "WCV-HEAR": ["Hearing test", "فحص السمع"], "WCV-VISION3": ["Eye and vision check", "فحص العين والنظر"],
+  "WCV-BP": ["Blood pressure check", "قياس ضغط الدم"], "WCV-ORAL": ["Dental check", "فحص الأسنان"],
+  "DEV-PRIORITY": ["Extra time with the doctor about development", "وقت إضافي مع الطبيب لمتابعة النمو"],
+  "IF-CORE": ["Comprehensive health check (IFHAS)", "الفحص الصحي الشامل (إفحص)"],
+  "IF-CRC": ["Bowel cancer screening", "فحص سرطان القولون"], "IF-MAMMO": ["Breast screening (mammogram)", "فحص الثدي (الماموجرام)"],
+  "IF-CERV": ["Cervical screening", "فحص عنق الرحم"], "IF-FUNDUS": ["Eye check (retina)", "فحص شبكية العين"],
+  "IF-DEXA": ["Bone strength scan", "فحص كثافة العظام"], "IF-MOCA": ["Memory check", "فحص الذاكرة"],
+  "LDCT": ["Lung check (low-dose scan)", "فحص الرئة بالأشعة منخفضة الجرعة"],
+  "CASCADE-FH": ["Genetic counselling for the family", "استشارة وراثية للأسرة"], "CASCADE-HBOC": ["Genetic counselling for the family", "استشارة وراثية للأسرة"],
+  "CASCADE-LYNCH": ["Genetic counselling for the family", "استشارة وراثية للأسرة"],
+  "DPP": ["Healthy living programme to prevent diabetes", "برنامج نمط حياة صحي للوقاية من السكري"],
+  "PATHWAY-GAP": ["Community health check", "فحص صحي مجتمعي"],
+};
+const WHY = {
+  en: {age: "Offered to everyone at this age by the Abu Dhabi programme.", late: "This was due {n} days ago.",
+       risk: "Recommended because of your health and family history. Your doctor will explain at the visit.",
+       cascade: "Suggested by a family letter. It does not share anyone's personal result.", community: "Offered at a mobile clinic near where you live or work."},
+  ar: {age: "يُقدَّم لكل من في هذا العمر ضمن برنامج أبوظبي.", late: "كان موعده قبل {n} يوماً.",
+       risk: "يُنصح به بناءً على تاريخك الصحي والعائلي، وسيشرح لك الطبيب ذلك خلال الزيارة.",
+       cascade: "اقترحته رسالة عائلية، ولا تتضمن نتيجة أي شخص.", community: "يُقدَّم في عيادة متنقلة قريبة من مكان سكنك أو عملك."},
+};
+
+const FA = {};
+function addDays(iso, n) { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+function faInit(h) {
+  const slot = h.slot || {date: addDays(D.today, 7), time: "10:00", why: []};
+  Object.assign(FA, {hh: h.id, ui: h.lang === "Arabic" ? "ar" : "en", screen: "login", member: null, booked: false,
+    slot, alts: [{date: addDays(slot.date, 2), time: "10:00"}, {date: addDays(slot.date, 3), time: "17:00"}, {date: addDays(slot.date, 6), time: "16:30"}],
+    stage: 0, callback: false, letterSent: false, letterPick: {}, stopped: false, saved: false,
+    chat: [{who: "bot", kind: "invite"}, {who: "bot", kind: "link"}]});
+}
+const clinicOf = h => h.housing === "labour accommodation" ? h.district : `${h.district} Healthcare Centre`;
+const fill = (t, o) => t.replace(/\{(\w+)\}/g, (_, k) => o[k] ?? "");
+const timeOf = s => s.time.split(" ")[0];
+
+function chatText(item, h) {
+  const ul = FA.ui, c = CHAT[ul], loc = LOCALE[ul], cp = P[h.contact];
+  const v = {date: dateTxt(FA.slot.date, loc), time: timeOf(FA.slot), clinic: clinicOf(h), code: "SC-" + (4000 + parseInt(h.id.slice(1))), name: "", months: ""};
+  if (item.kind === "invite") {
+    const lang = LANGS[h.lang] || "en", t = T[lang], aud = audienceKey(h), tpl = t[aud] || t.parent || T.en[aud];
+    const n = h.members.filter(m => visibleGaps(P[m]).length && C(m).outreach).length;
+    return {text: fill(tpl, {name: cp.first, n, date: dateTxt(FA.slot.date, LOCALE[lang]), time: timeOf(FA.slot), clinic: clinicOf(h)}), lang, opts: t.opts};
+  }
+  if (item.kind === "after") {
+    const kid = h.members.map(m => P[m]).filter(p => p.age < 6).sort((a, b) => a.age - b.age)[0];
+    let months = 36, name = cp.first;
+    if (kid) { const m = kid.age * 12, nx = D.rules.wcv_ages.find(x => x > m + 0.5); if (nx) { months = Math.max(1, Math.round(nx - m)); name = kid.first; } }
+    v.name = name; v.months = c.months(months);
+  }
+  if (item.kind === "me") return {text: item.text, lang: ul};
+  return {text: fill(c[item.kind], v), lang: ul};
+}
+
+function audienceKey(h) {
+  if (h.housing === "labour accommodation" || h.members.every(m => P[m].gaps.every(g => g.r === "PATHWAY-GAP"))) return "community";
+  return h.audience === "elder decision-maker" ? "elder" : h.audience === "parent" ? "parent" : "adult";
+}
+
+function book(slot, viaApp) {
+  FA.slot = slot; FA.booked = true; FA.stage = Math.max(FA.stage, 1);
+  if (viaApp) FA.chat.push({who: "bot", kind: "confirmed"});
+}
+function chatReply(i) {
+  const h = HH[FA.hh], c = CHAT[FA.ui], inv = chatText({kind: "invite"}, h);
+  FA.chat.push({who: "me", kind: "me", text: inv.opts[i]});
+  if (i === 0) { book(FA.slot); FA.chat.push({who: "bot", kind: "confirmed"}); }
+  if (i === 1) FA.chat.push({who: "bot", kind: "choose", alts: true});
+  if (i === 2) { FA.callback = true; FA.chat.push({who: "bot", kind: "doctor"}); }
+  if (i === 3) { FA.stopped = true; C(h.contact).outreach = false; h.members.forEach(m => { if (P[m].age < 18) C(m).outreach = false; }); FA.chat.push({who: "bot", kind: "stop"}); }
+  renderFamilyApp();
+}
+
+function renderChat(h) {
+  const wave = Array.from({length: 30}, (_, i) => `<i style="height:${6 + Math.abs(Math.sin(i * 1.7) * 16)}px"></i>`).join("");
+  const voice = h.channel.includes("voice");
+  let html = "", lastAlts = -1;
+  FA.chat.forEach((it, idx) => { if (it.alts) lastAlts = idx; });
+  FA.chat.forEach((it, idx) => {
+    const r = chatText(it, h), rtl = ["ar", "ur"].includes(r.lang);
+    if (it.who === "me") { html += `<div class="reply" dir="${rtl ? "rtl" : "ltr"}">${esc(r.text)}</div>`; return; }
+    if (it.kind === "invite" && voice) html += `<div class="bubble"><div class="voice"><span class="play">▶</span><span class="wave">${wave}</span><span style="font-size:.75rem;opacity:.6">0:24</span></div><span class="ts">Voice note</span></div>`;
+    if (it.kind === "link") {
+      html += `<div class="bubble lang-${r.lang}" dir="${rtl ? "rtl" : "ltr"}">${esc(r.text)}\n<button class="chatlink" id="fa-open">scope.adphc.ae/f/${h.id.toLowerCase()}</button><span class="ts">09:30</span></div>`;
+      if (!FA.booked && !FA.stopped && idx === 1) {
+        const opts = chatText({kind: "invite"}, h).opts, il = chatText({kind: "invite"}, h).lang;
+        html += `<div class="qr lang-${il}" dir="${["ar", "ur"].includes(il) ? "rtl" : "ltr"}">${opts.map((o, i) => `<button data-r="${i}">${esc(o)}</button>`).join("")}</div>`;
+      }
+      return;
+    }
+    if (it.kind === "checkin") {
+      const code = "SC-" + (4000 + parseInt(h.id.slice(1)));
+      html += `<div class="bubble lang-${r.lang}" dir="${rtl ? "rtl" : "ltr"}">${esc(r.text)}
+<span class="code" dir="ltr">${code}</span><span class="ts">08:05</span></div>`; return;
+    }
+    html += `<div class="bubble lang-${r.lang}" dir="${rtl ? "rtl" : "ltr"}" lang="${r.lang}">${esc(r.text)}<span class="ts">${it.kind === "reminder" ? "18:00" : it.kind === "after" ? "13:40" : "09:31"}</span></div>`;
+    if (it.alts && idx === lastAlts && !FA.booked) {
+      html += `<div class="qr" dir="${rtl ? "rtl" : "ltr"}">${FA.alts.map((a, i) => `<button data-alt="${i}">${esc(dateTxt(a.date, LOCALE[FA.ui]).split(",").slice(0, 2).join(","))} · ${a.time}</button>`).join("")}</div>`;
+    }
+  });
+  return html;
+}
+
+function appScreen(h) {
+  const u = UI[FA.ui], ui = FA.ui, cp = P[h.contact], loc = LOCALE[ui];
+  const mem = h.members.map(m => P[m]);
+  const managed = p => p.id === cp.id || (p.age < 18 && (p.mother === cp.id || p.father === cp.id || cp.role.startsWith("grand") || ["mother", "father"].includes(cp.role)));
+  const planned = mem.filter(p => live(p).gaps.length && C(p.id).outreach);
+  const plain = g => (PLAIN[g.r] || [g.i, g.i])[ui === "ar" ? 1 : 0];
+  const roleName = p => {
+    if (p.id === cp.id) return u.roles.self;
+    const F = p.sex === "F";
+    if (p.mother === cp.id || p.father === cp.id) return u.rel[F ? "daughter" : "son"];
+    const par = [p.mother, p.father].filter(Boolean).map(x => P[x]);
+    if (par.some(q => q.mother === cp.id || q.father === cp.id)) return u.rel[F ? "granddaughter" : "grandson"];
+    if (cp.mother === p.id || cp.father === p.id) return u.rel[F ? "mother" : "father"];
+    if ((cp.role === "mother" && p.role === "father") || (cp.role === "father" && p.role === "mother")) return u.rel[F ? "wife" : "husband"];
+    return u.roles[p.role];
+  };
+  const indexes = mem.filter(p => C(p.id).genomic && mem.some(q => q.gaps.some(g => g.r.startsWith("CASCADE") && g.via === p.id)) && (p.id === cp.id || (p.age < 18 && managed(p))));
+  const isIndex = indexes.length > 0;
+  const received = cp.gaps.some(g => g.r.startsWith("CASCADE")) && gapVisible(cp, cp.gaps.find(g => g.r.startsWith("CASCADE")));
+  if (FA.screen === "login") return `<div style="display:grid;gap:18px;justify-items:center;text-align:center;padding-top:40px">
+      <img src="${LOGO_SMALL}" alt="" style="height:96px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.25))">
+      <div><h3>${u.app}</h3><p class="small muted">${u.tagline}</p></div>
+      <button class="uaepass" id="fa-login"><i></i>${u.signin}</button><span class="tiny muted">${u.simulated}</span>
+      <p class="small" style="max-width:30ch">${u.privacy}</p></div>`;
+  const nav = `<div class="app-nav">${[["home", u.home], ["visit", u.visit], ["choices", u.choices], ...(isIndex || received ? [["letter", u.letter]] : [])]
+    .map(([k, l]) => `<button data-scr="${k}" aria-current="${FA.screen === k || (k === "home" && FA.screen === "member")}">${l}</button>`).join("")}</div>`;
+  let body = "";
+  if (FA.screen === "home") {
+    const card = `<div class="app-card hl"><span class="eyebrow">${u.fhd}</span>
+      <b style="font-family:var(--f-display);font-size:1.15rem">${esc(dateTxt(FA.slot.date, loc))} · ${timeOf(FA.slot)}</b>
+      <span class="small">${esc(clinicOf(h))} · ${fill(u.people, {n: planned.length})}</span>
+      ${FA.booked ? `<span class="chip c-ok">${u.booked}</span>` : `<span class="chip c-due">${u.notBooked}</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="fa-confirm">${u.confirm}</button><button class="btn ghost" data-scr="visit">${u.change}</button></div>`}</div>`;
+    const rows = mem.map(p => { const g = live(p).gaps.filter(x => C(p.id).outreach);
+      return `<button class="app-row" data-mem="${p.id}"><span class="av">${esc(p.first[0])}</span><span class="grow"><b>${esc(p.first)}</b><span class="tiny muted">${roleName(p)} · ${u.age(p.age)}</span></span>
+        <span class="tiny ${g.length ? "" : "muted"}">${g.length ? u.checks(g.length) : u.upToDate}</span><span class="chev">${ui === "ar" ? "‹" : "›"}</span></button>`; }).join("");
+    body = `<p style="font-family:var(--f-display);font-size:1.2rem">${fill(u.hello, {name: esc(cp.first)})}</p>
+      ${FA.stopped || !C(cp.id).outreach ? `<div class="app-card"><span class="small">${u.stopped}</span></div>` : planned.length ? card : `<div class="app-card"><span class="small">${u.nothing}</span></div>`}
+      ${received ? `<button class="app-row" data-scr="letter"><span class="av">✉</span><span class="grow"><b>${u.received}</b></span><span class="chev">${ui === "ar" ? "‹" : "›"}</span></button>` : ""}
+      <span class="eyebrow">${u.who}</span>${rows}`;
+  }
+  if (FA.screen === "member") {
+    const p = P[FA.member], g = live(p).gaps;
+    const why = x => x.r.startsWith("CASCADE") ? WHY[ui].cascade : x.r === "PATHWAY-GAP" ? WHY[ui].community : x.s === "risk-based" ? WHY[ui].risk :
+      (x.s === "overdue" && x.d > 0 ? fill(WHY[ui].late, {n: x.d}) + " " : "") + WHY[ui].age;
+    const seen = new Set();
+    const items = g.filter(x => { const k = plain(x); if (seen.has(k)) return false; seen.add(k); return true; })
+      .map(x => `<div class="app-card"><b>${esc(plain(x))}</b><span class="small muted">${esc(why(x))}</span></div>`).join("");
+    body = `<button class="btn ghost" data-scr="home" style="justify-self:start">${ui === "ar" ? "›" : "‹"} ${u.back}</button>
+      <div><h3>${esc(p.first)}</h3><span class="small muted">${roleName(p)} · ${u.age(p.age)}</span></div>
+      <span class="eyebrow">${u.atVisit}</span>${items || `<div class="app-card"><span class="small">${u.upToDate}</span></div>`}
+      <p class="tiny muted">${u.doctorNote}</p>`;
+  }
+  if (FA.screen === "visit") {
+    body = `<span class="eyebrow">${u.times}</span>
+      ${[FA.slot, ...FA.alts].filter((s, i, a) => a.findIndex(x => x.date === s.date && x.time === s.time) === i).slice(0, 4).map((s, i) => `<button class="app-row" data-slot="${s.date}|${s.time}">
+        <span class="grow"><b>${esc(dateTxt(s.date, loc))}</b><span class="tiny muted">${timeOf(s)} · ${esc(clinicOf(h))}</span></span>
+        ${FA.booked && s.date === FA.slot.date && s.time === FA.slot.time ? `<span class="chip c-ok">${u.booked}</span>` : ""}</button>`).join("")}
+      <button class="btn ghost" id="fa-call">${u.callMe}</button>${FA.callback ? `<div class="sync">${u.callReq}</div>` : ""}
+      <div class="app-card"><b>${u.bring}</b><ul class="rules">${u.bringList.map(x => `<li>${x}</li>`).join("")}</ul></div>`;
+  }
+  if (FA.screen === "choices") {
+    const blocks = mem.map(p => {
+      const can = managed(p), c = C(p.id), mgr = !can ? (mem.find(x => x.role === "father" || x.role === "mother") || p) : null;
+      const tg = CONSENT_KEYS.filter(k => k !== "genomic" || p.genomic_available).map(k => `<label class="tog"><input type="checkbox" id="fa-${p.id}-${k}" data-p="${p.id}" data-k="${k}" ${c[k] ? "checked" : ""} ${can ? "" : "disabled"}>${u["c_" + k]}</label>`).join("");
+      return `<div class="app-card"><b>${esc(p.first)} <span class="tiny muted">· ${roleName(p)}</span></b><div class="consent">${tg}</div>${!can ? `<span class="tiny muted">${fill(u.managedBy, {name: esc(p.first)})}</span>` : ""}</div>`;
+    }).join("");
+    body = `<p class="small">${u.choicesIntro}</p>${FA.saved ? `<div class="sync">${u.saved}</div>` : ""}${blocks}
+      <div class="app-card"><span class="tiny muted">${CONSENT_KEYS.map(k => `<b>${u["c_" + k]}</b>: ${u["d_" + k]}`).join("<br>")}</span></div>`;
+  }
+  if (FA.screen === "letter") {
+    if (isIndex) {
+      const ix = indexes[0], rel = mem.filter(p => p.gaps.some(g => g.r.startsWith("CASCADE") && g.via === ix.id));
+      body = `<h3>${u.letter}</h3><p class="small">${ix.id === cp.id ? u.letterIntro : fill(u.letterIntroOther, {name: esc(ix.first)})}</p><span class="eyebrow">${u.letterPick}</span>
+        ${rel.map(p => `<label class="app-row"><input type="checkbox" id="fa-l-${p.id}" data-l="${p.id}" ${FA.letterPick[p.id] !== false ? "checked" : ""} ${FA.letterSent ? "disabled" : ""}><span class="grow"><b>${esc(p.first)}</b><span class="tiny muted">${roleName(p)}</span></span></label>`).join("")}
+        ${FA.letterSent ? `<div class="sync">${u.sent}</div>` : `<button class="btn" id="fa-send">${u.send}</button>`}`;
+    } else body = `<h3>${u.received}</h3><p class="small">${u.receivedTxt}</p><div class="app-card hl"><b>${esc((PLAIN["CASCADE-FH"])[ui === "ar" ? 1 : 0])}</b><span class="small">${esc(clinicOf(h))}</span></div>`;
+  }
+  return `<div class="app-body" dir="${ui === "ar" ? "rtl" : "ltr"}" lang="${ui}">${body}</div>${nav}`;
+}
+
+function renderFamilyApp() {
+  const h0 = HH[FA.hh] || HH[currentFamily] || FEATURED[0];
+  if (FA.hh !== h0.id) faInit(h0);
+  const h = HH[FA.hh], u = UI[FA.ui];
+  const stages = ["Invitation", "Day-before reminder", "Visit day", "After the visit"];
+  const hhOpts = [...new Set([...FEATURED, ...D.households.filter(x => x.selected).slice(0, 30)])].map(x => `<option value="${x.id}" ${x.id === h.id ? "selected" : ""}>${esc(x.surname)} · ${esc(x.lang)} · ${esc(x.district)}</option>`).join("");
+  const changed = h.members.filter(changedConsent).map(m => P[m].first);
+  $("#v-familyapp").innerHTML = `
+  <div style="display:grid;gap:8px"><span class="eyebrow">What the family sees</span><h2>WhatsApp to start, a secure app for the details</h2>
+  <p class="lede">The invitation arrives on WhatsApp in the family's language and names no condition. Details, data choices and family letters live in the S.C.O.P.E Family mini-app, opened from the message with UAE PASS. Nothing to install.</p></div>
+  <div class="filters">
+    <label>Household<select id="fa-hh">${hhOpts}</select></label>
+    <label>Scenario<div class="stepper">${stages.map((s, i) => `<button data-stage="${i}" aria-current="${FA.stage === i || (i === 0 && FA.stage <= 1)}" ${i > 0 && !FA.booked ? "disabled" : ""}>${i + 1}. ${s}</button>`).join("")}</div></label>
+    <button class="btn ghost" id="fa-reset">Restart</button>
+  </div>
+  <div class="fa-grid">
+    <div class="phone" aria-label="WhatsApp on the family's phone">
+      <div class="ph-top"><div class="av">A</div><div><b style="font-size:.92rem">ADPHC Family Health</b><div style="font-size:.72rem;opacity:.85">Verified sender · ${esc(P[h.contact].first)}'s phone</div></div></div>
+      <div class="ph-body" id="fa-chat">${renderChat(h)}</div></div>
+    <div class="phone app" id="fa-phone" aria-label="S.C.O.P.E Family mini-app">
+      <div class="app-top"><img src="${LOGO_SMALL}" alt=""><b>${u.app}</b><div class="lng" role="group" aria-label="App language">
+        <button data-ui="en" aria-pressed="${FA.ui === "en"}">EN</button><button data-ui="ar" aria-pressed="${FA.ui === "ar"}">ع</button></div></div>
+      ${appScreen(h)}</div>
+    <div class="fa-side" style="display:grid;gap:14px">
+      ${changed.length ? `<div class="sync">Synced with the console: data choices changed for ${esc(changed.join(", "))}. <a href="#family-${h.id}">Open the family view</a> to see recalculated scores.</div>` : ""}
+      <div class="panel"><h3>Try it</h3><ul class="rules">
+        <li>Tap a reply under the invitation, or open the secure link.</li>
+        <li>Sign in, open a family member to see what each check is and why, in plain words.</li>
+        <li>Change a data choice: the care team's console updates at once.</li>
+        <li>Once booked, step through the reminder, check-in and after-visit messages.</li></ul></div>
+      <div class="panel"><h3>Message rules</h3><ul class="rules">
+        <li>WhatsApp messages never name a condition, a result or a genomic finding.</li>
+        <li>Sent from the verified ADPHC sender, using templates pre-approved for WhatsApp Business, and only to people who agreed to be contacted.</li>
+        <li>Every invitation offers four choices: confirm, another time, talk to my doctor first, or stop.</li>
+        <li>No messages during prayer times or fasting hours in Ramadan.</li>
+        <li>No WhatsApp, or no reply after two tries: SMS, a phone call, then a community health worker.</li>
+        <li>Family genetic follow-up only happens through a letter the person chooses to send.</li>
+        <li>Translations are drafts pending native-speaker and clinical review. The pilot translates the full conversation into all seven languages.</li></ul></div>
+    </div>
+  </div>`;
+  const re = () => { const cs = $("#fa-chat"); const top = cs ? cs.scrollTop : 0; renderFamilyApp(); const c2 = $("#fa-chat"); if (c2) c2.scrollTop = c2.scrollHeight; };
+  $("#fa-hh").onchange = e => { faInit(HH[e.target.value]); currentFamily = e.target.value; re(); };
+  $("#fa-reset").onclick = () => { h.members.forEach(m => delete consent[m]); faInit(h); re(); };
+  document.querySelectorAll("#fa-chat .qr button[data-r]").forEach(b => b.onclick = () => { chatReply(+b.dataset.r); re(); });
+  document.querySelectorAll("#fa-chat .qr button[data-alt]").forEach(b => b.onclick = () => { const a = FA.alts[+b.dataset.alt]; FA.chat.push({who: "me", kind: "me", text: b.textContent}); book(a); FA.chat.push({who: "bot", kind: "confirmed"}); re(); });
+  const open = $("#fa-open"); if (open) open.onclick = () => { FA.screen = "login"; re(); $("#fa-phone").scrollIntoView({behavior: "smooth", block: "nearest"}); };
+  document.querySelectorAll("#v-familyapp [data-stage]").forEach(b => b.onclick = () => {
+    const st = +b.dataset.stage, kinds = [null, "reminder", "checkin", "after"];
+    for (let i = 1; i <= st; i++) if (!FA.chat.some(c => c.kind === kinds[i])) FA.chat.push({who: "bot", kind: kinds[i]});
+    FA.stage = Math.max(FA.stage, st); re(); });
+  document.querySelectorAll("#fa-phone [data-ui]").forEach(b => b.onclick = () => { FA.ui = b.dataset.ui; re(); });
+  const lg = $("#fa-login"); if (lg) lg.onclick = () => { FA.screen = "home"; re(); };
+  document.querySelectorAll("#fa-phone [data-scr]").forEach(b => b.onclick = () => { FA.screen = b.dataset.scr; FA.saved = false; re(); });
+  document.querySelectorAll("#fa-phone [data-mem]").forEach(b => b.onclick = () => { FA.member = b.dataset.mem; FA.screen = "member"; re(); });
+  const cf = $("#fa-confirm"); if (cf) cf.onclick = () => { book(FA.slot, true); re(); };
+  document.querySelectorAll("#fa-phone [data-slot]").forEach(b => b.onclick = () => { const [d, t] = b.dataset.slot.split("|"); book({date: d, time: t}, true); FA.screen = "home"; re(); });
+  const call = $("#fa-call"); if (call) call.onclick = () => { if (!FA.callback) { FA.callback = true; FA.chat.push({who: "bot", kind: "doctor"}); } re(); };
+  document.querySelectorAll("#fa-phone .tog input").forEach(i => i.onchange = () => {
+    C(i.dataset.p)[i.dataset.k] = i.checked; FA.saved = true;
+    if (i.dataset.k === "outreach" && i.checked && i.dataset.p === h.contact) FA.stopped = false;
+    re(); });
+  document.querySelectorAll("#fa-phone [data-l]").forEach(i => i.onchange = () => { FA.letterPick[i.dataset.l] = i.checked; });
+  const send = $("#fa-send"); if (send) send.onclick = () => { FA.letterSent = true; re(); };
+}
+
+/* ================= SAFEGUARDS ================= */
+let AUD_DIM = "Nationality group";
+function calibChart(m, title) {
+  const W = 310, H = 230, pad = {l: 52, r: 12, t: 12, b: 34};
+  const mx = Math.max(...m.calibration.map(c => Math.max(c.pred, c.obs))) * 1.1;
+  const nice = mx > .4 ? .1 : mx > .2 ? .05 : .02, top = Math.ceil(mx / nice) * nice;
+  const x = v => pad.l + v / top * (W - pad.l - pad.r), y = v => H - pad.b - v / top * (H - pad.t - pad.b);
+  let grid = ""; for (let v = 0; v <= top + 1e-9; v += nice) grid += `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${pad.l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="10" fill="var(--muted)">${Math.round(v * 100)}%</text><text x="${x(v)}" y="${H - pad.b + 14}" text-anchor="middle" font-size="10" fill="var(--muted)">${Math.round(v * 100)}%</text>`;
+  const pts = m.calibration.map(c => `${x(c.pred)},${y(c.obs)}`).join(" ");
+  return `<div class="calib"><span class="eyebrow">${title}</span>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${title} calibration">${grid}
+    <line x1="${x(0)}" y1="${y(0)}" x2="${x(top)}" y2="${y(top)}" stroke="var(--muted)" stroke-dasharray="4 4"/>
+    <polyline points="${pts}" fill="none" stroke="var(--teal)" stroke-width="2"/>
+    ${m.calibration.map(c => `<circle cx="${x(c.pred)}" cy="${y(c.obs)}" r="4.5" fill="var(--teal)" stroke="var(--surface)" stroke-width="2"><title>Predicted ${pct(c.pred, 1)} · observed ${pct(c.obs, 1)} · n=${c.n}</title></circle>`).join("")}
+    <text x="${(W + pad.l) / 2}" y="${H - 4}" text-anchor="middle" font-size="10.5" fill="var(--ink-2)">Predicted risk (decile mean)</text>
+    <text x="11" y="${(H - pad.b) / 2}" font-size="10.5" fill="var(--ink-2)" transform="rotate(-90 11 ${(H - pad.b) / 2})" text-anchor="middle">Observed</text></svg>
+    <p class="tiny muted num">AUC ${m.auc_test.toFixed(2)} · Brier ${m.brier_test.toFixed(3)} · held-out n=${fmt(m.n_test)}. Dashed line is perfect calibration.</p></div>`;
+}
+function validationPanel() {
+  const V = D.validation, A = D.anchors, names = Object.keys(V.auc);
+  const bar = (v, mx, best) => `<div class="brow" style="height:14px"><div class="b ${best ? "bayt" : "base"}" style="width:${v / mx * 100}%;height:14px"></div><span class="val" style="left:calc(${v / mx * 100}% + 6px)">${v.toFixed(2)}</span></div>`;
+  const rows = (obj, mx, fmtv) => names.map(n => `<div class="cmp-row"><div class="lab">${esc(n)}</div><div class="bars">${bar(obj[n], mx, n.startsWith("S.C.O.P.E"))}</div><div></div></div>`).join("");
+  const an = [["diabetes_prevalence_20_79", "Diabetes prevalence, adults 20–79", v => pct(v, 1)], ["diabetes_undiagnosed_share", "Share of diabetes undiagnosed", v => pct(v)]]
+    .map(([k, l, f]) => `<tr><td>${l}</td><td class="r num">${f(A[k].synthetic)}</td><td class="r num">${f(A[k].value)}</td><td class="small muted">${esc(A[k].source)}</td></tr>`).join("");
+  return `<div class="grid2">
+    <div class="panel"><h3>Benchmark against a published score</h3><p class="small muted" style="margin-bottom:12px">${esc(V.benchmark_population)}. Outcome: cardiometabolic event or diabetes within 3 years. FINDRISC is the Finnish Diabetes Risk Score (Lindström &amp; Tuomilehto, 2003).</p>
+      <span class="eyebrow">Discrimination (AUC)</span><div class="cmp" style="margin:6px 0 14px">${rows(V.auc, 1)}</div>
+      <span class="eyebrow">Share of future cases in the top 10% of scores</span><div class="cmp" style="margin-top:6px">${rows(V.top_decile_capture, .6)}</div></div>
+    <div class="panel"><h3>Anchored to published UAE figures</h3><p class="small muted" style="margin-bottom:10px">The synthetic population is tuned so that headline rates match published estimates. Agreement here does not validate the model on real patients; that happens in the pilot.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Indicator</th><th class="r">Synthetic</th><th class="r">Published</th><th>Source</th></tr></thead><tbody>${an}</tbody></table></div></div></div>`;
+}
+function renderSafeguards() {
+  const rows = D.audit[AUD_DIM], sc = D.small_cell;
+  const cell = v => v == null ? `<td class="r sup">suppressed</td>` : `<td class="r num">${pct(v)}</td>`;
+  const body = rows.map(r => r.suppressed ? `<tr><td>${esc(r.segment)}</td><td class="r sup">&lt;${sc}</td><td colspan="7" class="sup">Fewer than ${sc} people: all figures suppressed</td></tr>` :
+    `<tr><td>${esc(r.segment)}</td><td class="r num">${fmt(r.n)}</td><td class="r num">${r.need == null ? '<span class="sup">&lt;' + sc + '</span>' : fmt(r.need)}</td>
+     ${cell(r.base_reach)}${cell(r.bayt_reach)}${cell(r.base_sens)}${cell(r.plain_sens)}${cell(r.bayt_sens)}${cell(r.bayt_ppv)}</tr>`).join("");
+  $("#v-safeguards").innerHTML = `
+  <div style="display:grid;gap:8px"><span class="eyebrow">Local population safeguards</span><h2>Who the model reaches, and who it misses</h2>
+  <p class="lede">Every cycle is audited by segment before invitations go out. Sensitivity is the share of people with real unmet need who are invited. Any cell under ${sc} people is suppressed, and rates are withheld when the group with need is that small.</p></div>
+  <div class="panel" style="display:grid;gap:8px"><h3>Audit alerts this cycle</h3>
+    ${D.alerts.map(a => `<div class="alert ${a.level}"><b>${{open: "Action", resolved: "Resolved", watch: "Watch"}[a.level]}</b><span>${esc(a.text)}</span></div>`).join("") || `<p class="muted">No alerts.</p>`}
+    <p class="tiny muted">Calibration alerts use an exact Poisson 95% interval on observed events. Action is taken only when the interval excludes 1; otherwise the segment stays under watch.</p></div>
+  <div style="display:grid;gap:10px">
+    <div class="filters"><label>Segment by<select id="au-dim">${Object.keys(D.audit).map(k => `<option ${k === AUD_DIM ? "selected" : ""}>${k}</option>`).join("")}</select></label>
+      <span class="small muted">Same 600-person budget for each strategy.</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Segment</th><th class="r">People</th><th class="r">With real need</th><th class="r">Reach · rules</th><th class="r">Reach · S.C.O.P.E</th>
+      <th class="r">Sensitivity · rules</th><th class="r">Sensitivity · S.C.O.P.E, pure priority</th><th class="r">Sensitivity · S.C.O.P.E + equity floor</th><th class="r">Precision · S.C.O.P.E</th></tr></thead><tbody>${body}</tbody></table></div>
+    <p class="tiny muted">"Real need" comes from the hidden ground truth of the synthetic population, which a live system would only learn from outcomes. Precision is the share of invited people who had real need.</p></div>
+  ${validationPanel()}
+  <div class="grid3">
+    <div class="panel">${calibChart(M.adult, M.adult.name)}</div>
+    <div class="panel">${calibChart(M.child, M.child.name)}</div>
+    <div class="panel" style="display:grid;gap:10px;align-content:start"><h3>Built-in protections</h3><ul class="rules">
+      <li>Equity floor: each language group receives at least 80% of its share of estimated need before pure priority fills the rest.</li>
+      <li>Calibration is checked per segment with an exact 95% interval. A significant deviation triggers shrinkage-based recalibration before the next cycle.</li>
+      <li>Low-confidence and insufficient-data flags are routed to a person for review, never auto-messaged at high intensity.</li>
+      <li>Ancestry is used only where guidelines set different thresholds (South Asian cardiometabolic risk), and is audited.</li></ul></div>
+  </div>`;
+  $("#au-dim").onchange = e => { AUD_DIM = e.target.value; renderSafeguards(); };
+}
+
+/* ================= OUTCOMES ================= */
+function renderOutcomes() {
+  const strat = [["baseline_age_sex_rules", "Current age/sex rules", "Everyone due by age is equally likely to be contacted; generic SMS in Arabic or English."],
+    ["bayt_prioritisation_only", "S.C.O.P.E ranking only", "Households ranked by need and risk; standard messages."],
+    ["bayt_full_no_equity_floor", "S.C.O.P.E ranking + tailoring", "Adds language, family bundling, timing and channel."],
+    ["bayt_full", "S.C.O.P.E full (with equity floor)", "The configuration shown in this prototype."],
+    ["bayt_full_half_effects", "S.C.O.P.E full, tailoring effects halved", "Stress test of the tailoring assumptions."]];
+  const mets = [["true_high_risk_reached", "High-risk people reached"], ["care_gaps_closed", "Care gaps closed"], ["completed_child_visits", "Child visits completed"],
+    ["completed_adult_screens", "Adult screens completed"], ["mchat_completed", "M-CHAT-R completed"], ["vaccines_caught_up", "Vaccines caught up"], ["undiagnosed_diabetes_found", "Undiagnosed diabetes found"], ["cascade_tests", "Family genetic follow-ups"], ["language_minority_reached", "Minority-language reach"]];
+  const body = strat.map(([k, n, d]) => `<tr><td><b>${n}</b><div class="tiny muted">${d}</div></td>${mets.map(([m]) => { const v = S[k][m]; return `<td class="r num">${fmt(Math.round(v.mean))}<div class="tiny muted">${fmt(Math.round(v.lo))}–${fmt(Math.round(v.hi))}</div></td>`; }).join("")}</tr>`).join("");
+  const eff = Object.entries(S.effects).map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, " "))}</td><td class="r num">+${v.toFixed(2)}</td><td class="r num">×${Math.exp(v).toFixed(2)}</td></tr>`).join("");
+  const comm = D.community.filter(c => c.gap_rate != null).slice(0, 10).map(c => `<tr><td>${esc(c.district)}<div class="tiny muted">${esc(c.region)}</div></td><td class="r num">${fmt(c.n)}</td><td class="r num">${pct(c.gap_rate)}</td><td class="r num">${c.workers ?? "–"}</td><td class="r num">${c.pathway_gap ?? "–"}</td><td class="r num">${c.overdue_child ?? "–"}</td></tr>`).join("");
+  $("#v-outcomes").innerHTML = `
+  <div style="display:grid;gap:8px"><span class="eyebrow">Outcome-based evaluation</span><h2>Measured in completed visits, not in flags</h2>
+  <p class="lede">Each strategy contacts the same 600 people per 90-day cycle. Attendance follows a hidden model of each person's behaviour; 200 simulated cycles give the mean and 95% interval. The tailoring effects are explicit assumptions you can read below.</p></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Strategy</th>${mets.map(([, n]) => `<th class="r">${n}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>
+  <div class="grid2">
+    <div class="panel"><h3>What the comparison shows</h3><ul class="rules">
+      <li>Ranking alone completes fewer child visits than the age rules, because it deliberately targets families who rarely attend. It still reaches more people at high risk.</li>
+      <li>Tailoring converts that targeting into attendance: language-concordant, bundled, well-timed invitations roughly double the high-risk people reached.</li>
+      <li>The equity floor costs almost nothing in total yield and doubles reach in minority languages.</li>
+      <li>Family genetic follow-up does not exist under age rules. It appears only when genomic results and family links are used with consent.</li></ul></div>
+    <div class="panel"><h3>Tailoring assumptions</h3><p class="small muted" style="margin-bottom:8px">Added to each person's log-odds of attending. Sized from published reminder and language-concordance studies; confirmed or replaced in the pilot.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Effect</th><th class="r">Log-odds</th><th class="r">Odds ratio</th></tr></thead><tbody>${eff}</tbody></table></div></div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3>Pilot evaluation plan</h3><ul class="rules">
+      <li><b>Design:</b> stepped-wedge rollout across primary-care catchments in Abu Dhabi City, Al Ain and Al Dhafra over 4 cycles; every catchment ends on S.C.O.P.E.</li>
+      <li><b>Primary outcomes:</b> completed Well-Child Visits at scheduled age, IFHAS completion within the 3-year cycle, M-CHAT-R uptake at 18 and 24 months (target 100%).</li>
+      <li><b>Timeliness:</b> days from due date to attendance; abnormal-result follow-up within 7 days and specialist review within 2–4 weeks, as the WCV standard sets.</li>
+      <li><b>Recall and follow-up:</b> share of positive M-CHAT-R referred and seen; cascade relatives counselled within 90 days.</li>
+      <li><b>Model quality:</b> calibration slope and ratio per segment each cycle; AUC on realised outcomes.</li>
+      <li><b>Downstream value:</b> earlier diagnoses (developmental, diabetes, familial hypercholesterolaemia), visits saved through bundling, cost per completed preventive action.</li></ul></div>
+    <div class="panel"><h3>Community view: where to send mobile clinics</h3><p class="small muted" style="margin-bottom:8px">Districts ranked by share of residents with an open item. Cells under ${D.small_cell} are suppressed.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>District</th><th class="r">People</th><th class="r">With open item</th><th class="r">In shared housing</th><th class="r">No funded pathway</th><th class="r">Children overdue</th></tr></thead><tbody>${comm}</tbody></table></div></div>
+  </div>`;
+}
+
+/* ================= GOVERNANCE ================= */
+function renderGovernance() {
+  const ledger = [
+    ["Well-Child Visit and IFHAS records", "Malaffi health information exchange; facility EMR", "Find due and overdue items under the DoH standards", "Always, for eligible people", "Clinician, programme team"],
+    ["Claims and visit history", "Shafafiya / insurer claims", "Confirm completed screens; avoid duplicate invitations", "Always", "Programme team"],
+    ["Genomic results", "Emirati Genome Programme, premarital and newborn screening", "Cascade invitations and FH risk only; never adult-onset findings for minors", "Explicit opt-in per person", "Genetic counsellor; scores only for others"],
+    ["Family links", "Family book / household registry", "Bundle visits; family history; cascade letters", "Opt-in, revocable", "Programme team"],
+    ["Social and contextual data", "Address, language, distance, work pattern", "Choose channel, language and time; equity audit", "Opt-in, revocable", "Outreach team"],
+    ["Outreach responses", "Messaging platform", "Learn timing and channel; respect stop requests", "Always; STOP is honoured at once", "Outreach team"],
+  ].map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("");
+  const card = (m, use) => `<div class="panel"><h3>${esc(m.name)}</h3><dl class="kv" style="margin-top:6px">
+    <dt>Use</dt><dd>${use}</dd><dt>Type</dt><dd>Logistic regression, ${m.features.length} inputs, 30 bootstrap refits for intervals</dd>
+    <dt>Training</dt><dd class="num">${fmt(m.n_train)} synthetic records; held-out ${fmt(m.n_test)}</dd>
+    <dt>Performance</dt><dd class="num">AUC ${m.auc_test.toFixed(2)}, Brier ${m.brier_test.toFixed(3)}, base rate ${pct(m.prevalence, 1)}</dd>
+    <dt>Inputs</dt><dd class="small">${m.labels.map(esc).join(" · ")}</dd>
+    <dt>Not for</dt><dd>Diagnosis, insurance or employment decisions, or ranking individuals outside the outreach programme</dd></dl></div>`;
+  $("#v-governance").innerHTML = `
+  <div style="display:grid;gap:8px"><span class="eyebrow">Responsible AI and data governance</span><h2>Every flag shows its data, its rule and its limits</h2>
+  <p class="lede">Guideline rules decide eligibility. Models only order the work and never override a guideline. Each data source has a stated purpose and a consent basis, and every invitation can be traced back to both.</p></div>
+  <div class="panel"><h3>System architecture</h3><div class="diagram" style="overflow-x:auto">
+    <svg viewBox="0 0 960 300" role="img" aria-label="S.C.O.P.E architecture">
+      ${[["Malaffi HIE · EMR", 30], ["IFHAS · WCV · claims", 82], ["Genome programme (opt-in)", 134], ["Family links (opt-in)", 186], ["Language · distance · work", 238]].map(([t, y]) => `<rect x="10" y="${y}" width="200" height="40" rx="8" fill="var(--surface-2)" stroke="var(--line)"/><text x="110" y="${y + 25}" text-anchor="middle" font-size="12" fill="var(--ink)">${t}</text>`).join("")}
+      <rect x="280" y="30" width="390" height="248" rx="12" fill="var(--teal-soft)" stroke="var(--teal)"/>
+      <text x="475" y="56" text-anchor="middle" font-size="15" font-family="Reem Kufi, sans-serif" fill="var(--teal-ink)">S.C.O.P.E engine</text>
+      ${[["Consent filter", 300, 74], ["Guideline rules (WCV v10, IFHAS)", 485, 74], ["Calibrated risk + intervals", 300, 134], ["Family graph + cascade", 485, 134], ["Equity floor + small-cell audit", 300, 194], ["Timing + channel planner", 485, 194]].map(([t, x, y]) => `<rect x="${x}" y="${y}" width="170" height="46" rx="7" fill="var(--surface)" stroke="var(--line)"/><text x="${x + 85}" y="${y + 28}" text-anchor="middle" font-size="11.5" fill="var(--ink)">${t}</text>`).join("")}
+      ${[["Clinician worklist", 30], ["Family Health Day plan", 94], ["Invitation in family language", 158], ["DoH dashboard", 222]].map(([t, y]) => `<rect x="740" y="${y}" width="200" height="46" rx="8" fill="var(--surface-2)" stroke="var(--line)"/><text x="840" y="${y + 28}" text-anchor="middle" font-size="12" fill="var(--ink)">${t}</text>`).join("")}
+      ${[50, 102, 154, 206, 258].map(y => `<path d="M210,${y} C245,${y} 245,154 280,154" fill="none" stroke="var(--muted)" stroke-width="1.5"/>`).join("")}
+      ${[53, 117, 181, 245].map(y => `<path d="M670,154 C705,154 705,${y} 740,${y}" fill="none" stroke="var(--muted)" stroke-width="1.5"/>`).join("")}
+      <path d="M840,268 L840,292 L475,292 L475,278" fill="none" stroke="var(--teal)" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="660" y="288" text-anchor="middle" font-size="10.5" fill="var(--muted)">attendance and results feed recalibration</text>
+    </svg></div></div>
+  <div><h3 style="margin-bottom:10px">Authorised data use</h3><div class="tbl-wrap"><table><thead><tr><th>Data</th><th>Source</th><th>Used for</th><th>Basis</th><th>Who sees detail</th></tr></thead><tbody>${ledger}</tbody></table></div></div>
+  <div class="grid3">${card(M.adult, "Orders adult outreach; suggests diabetes-prevention referral for clinician confirmation")}${card(M.child, "Orders child outreach; flags priority developmental surveillance at the next visit")}${card(M.engage, "Chooses outreach intensity and channel; never affects clinical eligibility")}</div>
+  <div class="grid2">
+    <div class="panel"><h3>Human oversight</h3><ul class="rules">
+      <li>A clinician reviews every risk-based pathway before the invitation is sent.</li>
+      <li>Insufficient-data flags go to a care coordinator instead of an automated message.</li>
+      <li>Every score is logged with its inputs, consent state, rule version (${esc(D.version)}) and model version.</li>
+      <li>Families can see why they were invited and change their data choices at any time.</li></ul></div>
+    <div class="panel"><h3>Assumptions and limits of this prototype</h3><ul class="rules">
+      <li>All records are synthetic. Rates are plausible orders of magnitude, not Abu Dhabi statistics. Founder-variant frequencies are enriched so that family follow-up can be demonstrated.</li>
+      <li>Tailoring effects on attendance are assumptions until measured in the pilot.</li>
+      <li>IFHAS rules follow the published 2025 package and immunisation rules follow DoH Circular 2026/77; both are re-checked at integration.</li>
+      <li>Per-segment recalibration uses shrinkage toward zero; two segments still show significant miscalibration on the synthetic test fold and are flagged for action.</li>
+      <li>The adult model beats FINDRISC and age alone on synthetic data only. Real-world performance must be established on Malaffi records in the pilot.</li>
+      <li>Message translations need native-speaker and clinical review.</li></ul></div>
+  </div>`;
+}
+
+/* ================= ROUTER ================= */
+const VIEWS = {home: renderHome, overview: renderOverview, worklist: renderWorklist, family: renderFamily, familyapp: renderFamilyApp, safeguards: renderSafeguards, outcomes: renderOutcomes, governance: renderGovernance};
+function route() {
+  let h = (location.hash || "#home").slice(1);
+  if (h === "family-app") h = "familyapp";
+  else if (h.startsWith("family-")) { const id = h.slice(7); if (HH[id]) currentFamily = id; h = "family"; }
+  if (!VIEWS[h]) h = "home";
+  for (const k of Object.keys(VIEWS)) $("#v-" + k).hidden = k !== h;
+  const href = h === "familyapp" ? "#family-app" : "#" + h;
+  document.querySelectorAll("nav.tabs a").forEach(a => a.setAttribute("aria-current", a.getAttribute("href") === href ? "page" : "false"));
+  VIEWS[h]();
+  scrollTo(0, 0);
+}
+addEventListener("hashchange", route);
+route();
+</script>

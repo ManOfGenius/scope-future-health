@@ -1,0 +1,10 @@
+# engine
+numpy>=1.26
+scipy>=1.11
+scikit-learn>=1.4
+# tests
+pytest>=8
+# optional: browser end-to-end test
+playwright>=1.44
+# production API server (the app itself is dependency-free WSGI)
+gunicorn>=22
