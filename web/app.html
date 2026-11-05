@@ -327,11 +327,12 @@ function gapVisible(p, g) {
 const CLOSED = new Set();   // gaps closed at a clinic visit: "pid|gapIndex"
 function visibleGaps(p) { return p.gaps.filter((g, i) => gapVisible(p, g) && !CLOSED.has(p.id + "|" + i)); }
 
+const MODEL_GATE = {ok: true};   // graceful degradation: when the model fails its validation gate, rank on guideline rules alone
 function live(p) {
   // recompute risk, confidence and priority under the current consent state
   const c = C(p.id), o = p.consent;
   const res = {risk: null, lo: null, hi: null, rr: 1, factors: [], completeness: p.completeness, confidence: p.confidence, priority: p.priority};
-  if (p.score && p.feat) {
+  if (p.score && p.feat && MODEL_GATE.ok) {
     const m = M[p.score.model], f = m.features, x = p.feat.slice();
     const set = (k, v) => { const i = f.indexOf(k); if (i >= 0) x[i] = v; };
     if (p.score.model === "adult" && !c.genomic) { set("fh_variant", 0); set("genomic_not_available", 1); }
@@ -352,10 +353,11 @@ function live(p) {
   const width = res.hi != null ? res.hi - res.lo : 0;
   res.confidence = comp < .4 ? "insufficient data" : comp >= .8 && width < .12 ? "high" : comp >= .6 ? "medium" : "low";
   if (!changedConsent(p.id)) res.confidence = p.confidence;
+  if (p.score && !MODEL_GATE.ok) res.confidence = "rules only";
   // priority
   const gaps = visibleGaps(p);
   let need = 0; for (const g of gaps) need += (D.gap_weight[g.r] || 1) * (g.s === "overdue" ? 1.3 : 1);
-  let rr = p.score ? Math.min(res.rr, 4) : 1;
+  let rr = p.score && MODEL_GATE.ok ? Math.min(res.rr, 4) : 1;
   if (gaps.some(g => g.r.startsWith("CASCADE"))) rr = Math.max(rr, 2.5);
   if (gaps.some(g => g.r === "WCV-MCHAT-REF")) rr = Math.max(rr, 3);
   res.priority = c.outreach ? need * (.5 + .5 * rr) * (.6 + (1 - p.p_attend)) : 0;
@@ -364,10 +366,11 @@ function live(p) {
 }
 const hhPriority = h => h.members.reduce((s, m) => s + live(P[m]).priority, 0);
 
+const gateBanner = () => MODEL_GATE.ok ? "" : `<div class="alert open" role="status"><b>Rules only</b><span>The risk model is switched off because it failed its validation gate. Households are ranked on overdue guideline items and likelihood of attending; risk scores are withheld until a validated model is restored. <a href="#safeguards">Safeguards</a></span></div>`;
 /* ---------------- vocab ---------------- */
 const STATUS = {overdue: ["Overdue", "c-over"], never: ["Never done", "c-over"], due: ["Due soon", "c-due"], "risk-based": ["Risk-based", "c-risk"], system: ["System gap", "c-sys"]};
 const chip = s => { const [t, c] = STATUS[s] || [s, "c-sys"]; return `<span class="chip ${c}">${t}</span>`; };
-const confB = c => `<span class="conf ${c.split(" ")[0]}" title="Data completeness and model interval width">${c === "insufficient data" ? "Insufficient data" : c[0].toUpperCase() + c.slice(1) + " confidence"}</span>`;
+const confB = c => c === "rules only" ? `<span class="conf low" title="Model switched off: ranked on guideline rules only">Rules only</span>` : `<span class="conf ${c.split(" ")[0]}" title="Data completeness and model interval width">${c === "insufficient data" ? "Insufficient data" : c[0].toUpperCase() + c.slice(1) + " confidence"}</span>`;
 const ROLE = {father: "Father", mother: "Mother", grandmother: "Grandmother", grandfather: "Grandfather", child: "Child", self: "Adult"};
 const ageTxt = a => a < 2 ? Math.round(a * 12) + " months" : Math.floor(a) + " years";
 const dateTxt = (iso, loc = "en-GB") => new Date(iso + "T12:00:00").toLocaleDateString(loc, {weekday: "long", day: "numeric", month: "long"});
@@ -537,6 +540,7 @@ function renderWorklist() {
   $("#v-worklist").innerHTML = `
   <div style="display:grid;gap:8px"><span class="eyebrow">Outreach worklist</span><h2>Who to invite first this cycle</h2>
   <p class="lede">Households ranked by preventable need: overdue guideline items, weighted by calibrated risk and by how unlikely the family is to come without help. The default view shows the 600-person cycle allocated with a language-level equity floor.</p></div>
+  ${gateBanner()}
   <div class="filters">
     <label>Search<input type="search" id="wl-q" value="${esc(WL.q)}" placeholder="Family or district"></label>
     <label>Region<select id="wl-region">${opts("region", uniq("region"))}</select></label>
@@ -593,6 +597,7 @@ function familyGraph(h) {
 
 function riskBlock(p, lv) {
   if (!p.score) return "";
+  if (!MODEL_GATE.ok) return `<div class="small muted">Risk score withheld: the model is switched off after failing its validation gate. Guideline items below still apply.</div>`;
   const m = M[p.score.model], mx = Math.max(.35, lv.hi * 1.15), x = v => Math.min(100, v / mx * 100);
   const what = p.score.model === "adult" ? "3-year cardiometabolic risk" : "Developmental concern risk";
   const facs = lv.factors.map(([lab, v]) => {
@@ -659,7 +664,7 @@ function renderFamily() {
   const mem = h.members.map(m => P[m]);
   const opts = FEATURED.map(f => `<option value="${f.id}" ${f.id === h.id ? "selected" : ""}>${esc(f.surname)} household (featured)</option>`).join("") +
     D.households.filter(x => x.selected && !FEATURED.includes(x)).slice(0, 40).map(x => `<option value="${x.id}" ${x.id === h.id ? "selected" : ""}>${esc(x.surname)} · ${esc(x.district)} (#${x.rank})</option>`).join("");
-  $("#v-family").innerHTML = `
+  $("#v-family").innerHTML = `${gateBanner()}
   <div class="fam-head"><div style="display:grid;gap:6px"><span class="eyebrow">Family view · household ${h.id}</span>
       <h2>The ${esc(h.surname)} household</h2>
       <div class="meta"><span class="chip c-sys">${esc(h.group)}</span><span class="chip c-sys">${esc(h.district)}, ${esc(h.region)}</span><span class="chip c-sys">${esc(h.lang)}</span><span class="chip c-sys">${esc(h.insurance)} cover</span><span class="chip c-sys num">${h.dist_km} km to clinic</span></div></div>
@@ -814,6 +819,18 @@ const WHY = {
 };
 
 const FA = {};
+// Channel policy. Default: WhatsApp (servers outside the UAE) carries a content-free notification only; every
+// detail, including date, clinic and who is invited, is shown in UAE-hosted channels (mini-app, UAE SMS).
+// "exception" shows the full template, only where the DoH has granted an exception under Federal Law No. 2 of 2019, Art. 13.
+let WA_POLICY = "uae";
+const NOTICE = {
+  en: "New message from ADPHC Family Health for your family. Open it securely with UAE PASS:",
+  ar: "رسالة جديدة لعائلتك من صحة الأسرة في مركز أبوظبي للصحة العامة. افتحها بأمان عبر الهوية الرقمية UAE PASS:",
+  ur: "آپ کے خاندان کے لیے ADPHC فیملی ہیلتھ کی طرف سے نیا پیغام۔ UAE PASS کے ذریعے محفوظ طریقے سے کھولیں:",
+  hi: "आपके परिवार के लिए ADPHC फ़ैमिली हेल्थ से नया संदेश। UAE PASS से सुरक्षित रूप से खोलें:",
+  ml: "നിങ്ങളുടെ കുടുംബത്തിന് ADPHC ഫാമിലി ഹെൽത്തിൽ നിന്ന് പുതിയ സന്ദേശം. UAE PASS ഉപയോഗിച്ച് സുരക്ഷിതമായി തുറക്കുക:",
+  fil: "May bagong mensahe mula sa ADPHC Family Health para sa inyong pamilya. Buksan nang ligtas gamit ang UAE PASS:",
+  bn: "আপনার পরিবারের জন্য ADPHC ফ্যামিলি হেলথ থেকে নতুন বার্তা। UAE PASS দিয়ে নিরাপদে খুলুন:"};
 function addDays(iso, n) { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
 function faInit(h) {
   const slot = h.slot || {date: addDays(D.today, 7), time: "10:00", why: []};
@@ -868,12 +885,21 @@ function renderChat(h) {
   const voice = h.channel.includes("voice");
   let html = "", lastAlts = -1;
   FA.chat.forEach((it, idx) => { if (it.alts) lastAlts = idx; });
+  const strict = WA_POLICY !== "exception", il0 = chatText({kind: "invite"}, h).lang, rtl0 = ["ar", "ur"].includes(il0);
+  const notice = (ts, quick) => `<div class="bubble lang-${il0}" dir="${rtl0 ? "rtl" : "ltr"}" lang="${il0}">${esc(NOTICE[il0] || NOTICE.en)}\n<button class="chatlink fa-open">scope.adphc.ae/f/${h.id.toLowerCase()}</button><span class="ts">${ts}</span></div>` +
+    (quick ? `<div class="qr lang-${il0}" dir="${rtl0 ? "rtl" : "ltr"}"><button data-r="3">${esc(chatText({kind: "invite"}, h).opts[3])}</button></div>` : "");
   FA.chat.forEach((it, idx) => {
     const r = chatText(it, h), rtl = ["ar", "ur"].includes(r.lang);
+    if (strict && it.who === "bot" && it.kind !== "stop") {
+      if (it.kind === "invite") return;
+      html += notice(it.kind === "link" ? "09:30" : it.kind === "reminder" ? "18:00" : it.kind === "after" ? "13:40" : it.kind === "checkin" ? "08:05" : "09:31",
+        it.kind === "link" && idx === 1 && !FA.booked && !FA.stopped);
+      return;
+    }
     if (it.who === "me") { html += `<div class="reply" dir="${rtl ? "rtl" : "ltr"}">${esc(r.text)}</div>`; return; }
     if (it.kind === "invite" && voice) html += `<div class="bubble"><div class="voice"><span class="play">▶</span><span class="wave">${wave}</span><span style="font-size:.75rem;opacity:.6">0:24</span></div><span class="ts">Voice note</span></div>`;
     if (it.kind === "link") {
-      html += `<div class="bubble lang-${r.lang}" dir="${rtl ? "rtl" : "ltr"}">${esc(r.text)}\n<button class="chatlink" id="fa-open">scope.adphc.ae/f/${h.id.toLowerCase()}</button><span class="ts">09:30</span></div>`;
+      html += `<div class="bubble lang-${r.lang}" dir="${rtl ? "rtl" : "ltr"}">${esc(r.text)}\n<button class="chatlink fa-open">scope.adphc.ae/f/${h.id.toLowerCase()}</button><span class="ts">09:30</span></div>`;
       if (!FA.booked && !FA.stopped && idx === 1) {
         const opts = chatText({kind: "invite"}, h).opts, il = chatText({kind: "invite"}, h).lang;
         html += `<div class="qr lang-${il}" dir="${["ar", "ur"].includes(il) ? "rtl" : "ltr"}">${opts.map((o, i) => `<button data-r="${i}">${esc(o)}</button>`).join("")}</div>`;
@@ -987,6 +1013,7 @@ function renderFamilyApp() {
   <div class="filters">
     <label>Household<select id="fa-hh">${hhOpts}</select></label>
     <label>Scenario<div class="stepper">${stages.map((s, i) => `<button data-stage="${i}" aria-current="${FA.stage === i || (i === 0 && FA.stage <= 1)}" ${i > 0 && !FA.booked ? "disabled" : ""}>${i + 1}. ${s}</button>`).join("")}</div></label>
+    <label>WhatsApp content<select id="fa-policy"><option value="uae" ${WA_POLICY !== "exception" ? "selected" : ""}>Notification only (default, data stays in the UAE)</option><option value="exception" ${WA_POLICY === "exception" ? "selected" : ""}>Full template (only with a DoH exception)</option></select></label>
     <button class="btn ghost" id="fa-reset">Restart</button>
   </div>
   <div class="fa-grid">
@@ -1000,14 +1027,15 @@ function renderFamilyApp() {
     <div class="fa-side" style="display:grid;gap:14px">
       ${changed.length ? `<div class="sync">Synced with the console: data choices changed for ${esc(changed.join(", "))}. <a href="#family-${h.id}">Open the family view</a> to see recalculated scores.</div>` : ""}
       <div class="panel"><h3>Try it</h3><ul class="rules">
-        <li>Tap a reply under the invitation, or open the secure link.</li>
+        <li>${WA_POLICY === "exception" ? "Tap a reply under the invitation, or open the secure link." : "Open the secure link, sign in, and confirm the Family Health Day in the app. Switch WhatsApp content to see the full-template variant."}</li>
         <li>Sign in, open a family member to see what each check is and why, in plain words.</li>
         <li>Change a data choice: the care team's console updates at once.</li>
         <li>Once booked, step through the reminder, check-in and after-visit messages.</li></ul></div>
       <div class="panel"><h3>Message rules</h3><ul class="rules">
-        <li>WhatsApp messages never name a condition, a result or a genomic finding.</li>
+        <li>${WA_POLICY === "exception" ? "Full-template mode: date, time and clinic appear on WhatsApp. Used only where the DoH grants an exception to the in-country storage rule (Federal Law No. 2 of 2019, Art. 13)." : "By default WhatsApp, whose servers sit outside the UAE, carries a content-free notification only. Date, clinic, names and every health detail stay in UAE-hosted channels: the mini-app and UAE SMS."}</li>
+        <li>WhatsApp messages never name a condition, a result or a genomic finding, in either mode.</li>
         <li>Sent from the verified ADPHC sender, using templates pre-approved for WhatsApp Business, and only to people who agreed to be contacted.</li>
-        <li>Every invitation offers four choices: confirm, another time, talk to my doctor first, or stop.</li>
+        <li>${WA_POLICY === "exception" ? "Every invitation offers four choices: confirm, another time, talk to my doctor first, or stop." : "WhatsApp offers one reply, stop messages. Confirming, choosing another time and asking for the doctor happen in the mini-app."}</li>
         <li>No messages during prayer times or fasting hours in Ramadan.</li>
         <li>No WhatsApp, or no reply after two tries: SMS, a phone call, then a community health worker.</li>
         <li>Family genetic follow-up only happens through a letter the person chooses to send.</li>
@@ -1019,7 +1047,8 @@ function renderFamilyApp() {
   $("#fa-reset").onclick = () => { h.members.forEach(m => delete consent[m]); faInit(h); re(); };
   document.querySelectorAll("#fa-chat .qr button[data-r]").forEach(b => b.onclick = () => { chatReply(+b.dataset.r); re(); });
   document.querySelectorAll("#fa-chat .qr button[data-alt]").forEach(b => b.onclick = () => { const a = FA.alts[+b.dataset.alt]; FA.chat.push({who: "me", kind: "me", text: b.textContent}); book(a); FA.chat.push({who: "bot", kind: "confirmed"}); re(); });
-  const open = $("#fa-open"); if (open) open.onclick = () => { FA.screen = "login"; re(); $("#fa-phone").scrollIntoView({behavior: "smooth", block: "nearest"}); };
+  document.querySelectorAll("#fa-chat .fa-open").forEach(b => b.onclick = () => { re(); $("#fa-phone").scrollIntoView({behavior: "smooth", block: "nearest"}); });
+  $("#fa-policy").onchange = e => { WA_POLICY = e.target.value; re(); };
   document.querySelectorAll("#v-familyapp [data-stage]").forEach(b => b.onclick = () => {
     const st = +b.dataset.stage, kinds = [null, "reminder", "checkin", "after"];
     for (let i = 1; i <= st; i++) if (!FA.chat.some(c => c.kind === kinds[i])) FA.chat.push({who: "bot", kind: kinds[i]});
@@ -1301,7 +1330,7 @@ function encounterView(a) {
   const gapsByP = k => p.gaps.map((g, i) => ({g, i})).filter(({g}) => RP[g.r] === k && gapVisible(p, g));
   const why = a.purposes.map(k => `<div style="display:grid;gap:4px;padding:10px 0;border-top:1px solid var(--line)"><b>${esc(PURP[k].label)}</b><span class="small muted">${esc(PURP[k].why)}</span>
       <ul class="rules">${gapsByP(k).map(({g}) => `<li>${chip(g.s)} ${esc(g.i)}</li>`).join("")}</ul></div>`).join("");
-  const risk = p.score ? `<p class="small"><span class="muted">${p.score.model === "adult" ? "3-year cardiometabolic risk" : "Developmental concern risk"}:</span> <b class="num">${pct(lv.risk, 1)}</b> <span class="muted num">(${lv.rr.toFixed(1)}× average · confidence ${esc(lv.confidence)})</span><br><span class="muted">Main factors:</span> ${lv.factors.map(f => `${esc(f[0])} ${f[1] > 0 ? "↑" : "↓"}`).join(", ") || "none"}</p>` : "";
+  const risk = p.score && !MODEL_GATE.ok ? `<p class="small muted">Risk score withheld while the model is switched off; guideline items apply.</p>` : p.score ? `<p class="small"><span class="muted">${p.score.model === "adult" ? "3-year cardiometabolic risk" : "Developmental concern risk"}:</span> <b class="num">${pct(lv.risk, 1)}</b> <span class="muted num">(${lv.rr.toFixed(1)}× average · confidence ${esc(lv.confidence)})</span><br><span class="muted">Main factors:</span> ${lv.factors.map(f => `${esc(f[0])} ${f[1] > 0 ? "↑" : "↓"}`).join(", ") || "none"}</p>` : "";
   const header = `<div class="panel" style="display:grid;gap:8px">
     <div class="mhead"><div><span class="nm">${esc(nameOf(p))}</span><span class="small muted"> · ${ROLE[p.role]}, ${ageTxt(p.age)}, ${p.sex === "F" ? "female" : "male"}</span></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${a.continuity ? `<span class="chip c-ok">You are the treating physician</span>` : `<span class="chip c-sys">Covering for ${esc(tp.name)}</span>`}${a.interpreter ? `<span class="chip c-due">Interpreter: ${esc(h.lang)}</span>` : ""}</div></div>
@@ -1409,6 +1438,12 @@ function renderSafeguards() {
   $("#v-safeguards").innerHTML = `
   <div style="display:grid;gap:8px"><span class="eyebrow">Local population safeguards</span><h2>Who the model reaches, and who it misses</h2>
   <p class="lede">Every cycle is audited by segment before invitations go out. Sensitivity is the share of people with real unmet need who are invited. Any cell under ${sc} people is suppressed, and rates are withheld when the group with need is that small.</p></div>
+  ${gateBanner()}
+  <div class="panel" style="display:grid;gap:10px"><h3>Fallback if the model fails</h3>
+    <p class="small">Before each cycle the model must pass its gate: discrimination no worse than the published FINDRISC score, calibration inside its 95% interval in every audited segment. If it fails, S.C.O.P.E keeps running on the guideline rules alone, so no family loses an overdue check because a model broke.</p>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn ${MODEL_GATE.ok ? "ghost" : ""}" id="sg-gate">${MODEL_GATE.ok ? "Simulate a failed model gate" : "Restore the validated model"}</button>
+    <span class="small muted">State: <b>${MODEL_GATE.ok ? "model on, passed gate" : "model off, ranking on rules only"}</b></span></div>
+    <p class="tiny muted">Try it, then open the worklist: the order changes, scores are withheld, every overdue item stays.</p></div>
   <div class="panel" style="display:grid;gap:8px"><h3>Audit alerts this cycle</h3>
     ${D.alerts.map(a => `<div class="alert ${a.level}"><b>${{open: "Action", resolved: "Resolved", watch: "Watch"}[a.level]}</b><span>${esc(a.text)}</span></div>`).join("") || `<p class="muted">No alerts.</p>`}
     <p class="tiny muted">Calibration alerts use an exact Poisson 95% interval on observed events. Action is taken only when the interval excludes 1; otherwise the segment stays under watch.</p></div>
@@ -1429,6 +1464,7 @@ function renderSafeguards() {
       <li>Ancestry is used only where guidelines set different thresholds (South Asian cardiometabolic risk), and is audited.</li></ul></div>
   </div>`;
   $("#au-dim").onchange = e => { AUD_DIM = e.target.value; renderSafeguards(); };
+  $("#sg-gate").onclick = () => { MODEL_GATE.ok = !MODEL_GATE.ok; renderSafeguards(); };
 }
 
 /* ================= OUTCOMES ================= */

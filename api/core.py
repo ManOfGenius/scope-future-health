@@ -40,6 +40,8 @@ class Store:
         self.clinics = {x["id"]: x for x in self.D.get("clinics", [])}
         self.encounters: dict[str, dict] = {}
         self.closed: set[tuple[str, int]] = set()
+        # graceful degradation: False when the model fails its validation gate -> rank on rules alone
+        self.model_ok = True
 
     # ------------------------------------------------------------ consent
     def set_consent(self, pid: str, key: str, value: bool) -> None:
@@ -85,7 +87,7 @@ class Store:
     def live(self, pid: str) -> dict:
         p, c = self.people[pid], self.consent[pid]
         out = {"risk": None, "lo": None, "hi": None, "rr": 1.0, "factors": [], "model": None}
-        if p.get("score") and p.get("feat"):
+        if p.get("score") and p.get("feat") and self.model_ok:
             mk = p["score"]["model"]
             m = self.models[mk]
             f, x = m["features"], list(p["feat"])
@@ -118,10 +120,12 @@ class Store:
         conf = ("insufficient data" if comp < 0.4 else "high" if comp >= 0.8 and width < 0.12
                 else "medium" if comp >= 0.6 else "low")
         out["completeness"], out["confidence"] = comp, (conf if self.consent_changed(pid) else p["confidence"])
+        if p.get("score") and not self.model_ok:
+            out["confidence"] = "rules only"
         # priority
         gaps = self.visible_gaps(pid)
         need = sum(self.D["gap_weight"].get(g["r"], 1.0) * (1.3 if g["s"] == "overdue" else 1.0) for g in gaps)
-        rr = min(out["rr"], 4.0) if p.get("score") else 1.0
+        rr = min(out["rr"], 4.0) if p.get("score") and self.model_ok else 1.0
         if any(g["r"].startswith("CASCADE") for g in gaps):
             rr = max(rr, 2.5)
         if any(g["r"] == "WCV-MCHAT-REF" for g in gaps):

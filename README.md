@@ -19,7 +19,8 @@ Submitted to the **Future Health Digital Innovation Challenge 2026 · Population
 | Scheduling | Several clinics per district, clinicians with roles, languages, sessions and capacity; a treating physician per person; one session per household; cover only when capacity forces it; interpreter flagged | `engine/engine.py` |
 | Visit purposes | Each open item maps to a predictive purpose (development, anaemia, cardiometabolic, cancer, genetic cascade, immunisation, school check, community check) that sets the clinician role, the slot length and the examination protocol | `engine/guidelines.py` |
 | Clinician workspace | Personal schedule, protocol by purpose, guideline decision support, orders, referrals with due dates, ICD-10-CM codes, signed encounters saved to a shared record | `web/app.html` |
-| Engagement | Channel, addressee and timing per household (school, shift work, Ramadan); seven-language invitations with no health detail | `web/app.html` |
+| Engagement | Channel, addressee and timing per household (school, shift work, Ramadan); seven-language invitations with no health detail. By default WhatsApp carries a content-free notification only and every detail stays in UAE-hosted channels (mini-app, UAE SMS); a full-template mode is reserved for a DoH exception | `web/app.html` |
+| Graceful degradation | If the model fails its validation gate, ranking falls back to guideline rules alone, scores are withheld and a banner says so; no overdue item is dropped | `web/app.html`, `api/core.py` |
 | Interoperability | FHIR R4 API with roles, purpose-of-use and a full audit trail | `api/` |
 
 ## Quick start
@@ -71,7 +72,7 @@ Outcome simulation (600 people contacted per 90-day cycle, 200 cycles): S.C.O.P.
 
 ## Tests
 
-`make test` runs 37 tests covering clinic and clinician assignment, session timing, capacity, treating-physician continuity, Ramadan and shift-work rules, encounter signing rights and FHIR output, guideline windows, sex-specific rules, immunisation schedule conformance, Thiqa eligibility, genomic ethics for minors, consent-gated cascade, small-cell suppression, invitations free of condition names, role and purpose-of-use enforcement, consent recomputation, revoked invitations after opt-out, and audit of refusals.
+`make test` runs 38 tests covering clinic and clinician assignment, session timing, capacity, treating-physician continuity, Ramadan and shift-work rules, encounter signing rights and FHIR output, guideline windows, sex-specific rules, immunisation schedule conformance, Thiqa eligibility, genomic ethics for minors, consent-gated cascade, small-cell suppression, invitations free of condition names, role and purpose-of-use enforcement, consent recomputation, revoked invitations after opt-out, audit of refusals, and the rules-only fallback when the model is switched off.
 
 ## Scalability (single laptop core)
 

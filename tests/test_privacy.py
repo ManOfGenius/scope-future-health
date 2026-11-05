@@ -41,3 +41,19 @@ def test_withdrawn_outreach_means_zero_priority(data):
     for p in data["people"].values():
         if p["consent"][3] == 0:
             assert p["priority"] == 0
+
+
+def test_failed_model_gate_falls_back_to_rules():
+    """Graceful degradation: with the model switched off, no score is shown, every guideline item stays,
+    and anyone with an open item and outreach consent still gets a positive priority."""
+    from api.core import Store
+    s = Store()
+    scored = [pid for pid, p in s.people.items() if p.get("score") and s.visible_gaps(pid)][:300]
+    before = {pid: len(s.live(pid)["gaps"]) for pid in scored}
+    s.model_ok = False
+    for pid in scored:
+        lv = s.live(pid)
+        assert lv["risk"] is None and lv["confidence"] == "rules only"
+        assert len(lv["gaps"]) == before[pid]
+        if s.consent[pid]["outreach"]:
+            assert lv["priority"] > 0

@@ -24,9 +24,16 @@ async def main():
                 await pg.click("#themebtn"); await pg.wait_for_timeout(100)
                 # family app flow
                 await pg.evaluate("location.hash='family-app'"); await pg.wait_for_timeout(300)
+                # default policy: WhatsApp shows a content-free notice, no clinic, date or invite options
+                chat = await pg.inner_text("#fa-chat")
+                clinic = await pg.evaluate("clinicOf(HH[FA.hh])")
+                strict_ok = clinic not in chat and await pg.evaluate("document.querySelectorAll('#fa-chat .qr button').length") == 1
+                print("strict WhatsApp notice content-free:", strict_ok)
+                if not strict_ok: errs.append("strict WhatsApp mode leaks detail")
+                await pg.select_option("#fa-policy", "exception"); await pg.wait_for_timeout(150)
                 await pg.click("#fa-chat .qr button[data-r='1']"); await pg.wait_for_timeout(150)
                 await pg.click("#fa-chat .qr button[data-alt='0']"); await pg.wait_for_timeout(150)
-                await pg.click("#fa-open"); await pg.wait_for_timeout(150)
+                await pg.click("#fa-chat .fa-open >> nth=-1"); await pg.wait_for_timeout(150)
                 await pg.click("#fa-login"); await pg.wait_for_timeout(150)
                 await pg.click("#fa-phone [data-mem]"); await pg.wait_for_timeout(150)
                 await pg.screenshot(path="/tmp/scope-shots-s-fa-member.png")
@@ -44,6 +51,17 @@ async def main():
                 print("letter tab:", has_letter, "chat bubbles:", await pg.evaluate("document.querySelectorAll('#fa-chat .bubble, #fa-chat .reply').length"),
                       "sync note:", await pg.evaluate("!!document.querySelector('.fa-side .sync')"))
                 await pg.screenshot(path="/tmp/scope-shots-s-fa-flow-ar.png", full_page=True)
+                # graceful degradation: failed model gate -> rules-only ranking, scores withheld
+                await pg.evaluate("location.hash='safeguards'"); await pg.wait_for_timeout(200)
+                await pg.click("#sg-gate"); await pg.wait_for_timeout(150)
+                await pg.evaluate("location.hash='worklist'"); await pg.wait_for_timeout(250)
+                ro = await pg.evaluate("document.querySelectorAll('#v-worklist .conf').length && [...document.querySelectorAll('#v-worklist .conf')].every(e => e.textContent === 'Rules only')")
+                banner = await pg.evaluate("!!document.querySelector('#v-worklist .alert')")
+                print("rules-only fallback:", ro, "banner:", banner)
+                if not (ro and banner): errs.append("fallback not shown")
+                await pg.screenshot(path="/tmp/scope-shots-s-fallback.png")
+                await pg.evaluate("location.hash='safeguards'"); await pg.wait_for_timeout(200)
+                await pg.click("#sg-gate"); await pg.wait_for_timeout(150)
             await ctx.close()
         await b.close()
         print("ERRORS:", errs)
