@@ -44,8 +44,12 @@ def test_vaccine_gaps_match_schedule(data):
     for p in data["people"].values():
         for g in p["gaps"]:
             if g["r"] == "VAX":
-                assert g["i"] in labels
-                assert p["age"] * 12 >= labels[g["i"]] - 0.1, (p["id"], g["i"])
+                if g["i"].startswith("Catch-up review"):
+                    assert p["age"] >= 2, p["id"]; continue
+                base = g["i"] if g["i"] in labels else next((l for l in labels if l.replace(", rotavirus", "") == g["i"]), None)
+                assert base, g["i"]
+                assert p["age"] * 12 >= labels[base] - 0.1, (p["id"], g["i"])
+                if p["age"] * 12 > 8: assert "rotavirus" not in g["i"], (p["id"], g["i"])
 
 def test_dpp_only_for_eligible_adults_without_known_diabetes(data):
     for p in data["people"].values():

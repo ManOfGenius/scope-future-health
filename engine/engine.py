@@ -45,10 +45,20 @@ VAXI = {v["id"]: v for v in VAX_SCHEDULE}
 
 def child_gaps(p):
     gaps = []; m = p["age"] * 12
+    infant_missing = []
     for vid in p.get("vax_missing", []):
         v = VAXI[vid]; late = m - v["due_m"] - VAX_GRACE_M[v["due_m"]]
-        gaps.append({"rule": "VAX", "item": f'{v["label"]}: {v["vaccines"]}', "status": "overdue" if late > 0 else "due",
+        if v["due_m"] <= 18 and m >= 24:
+            infant_missing.append(v["label"].replace(" vaccines", "")); continue   # handled as one catch-up review
+        vacc = v["vaccines"]
+        if m > 8:   # rotavirus is not given after 8 months of age
+            vacc = vacc.replace(", rotavirus", "")
+        gaps.append({"rule": "VAX", "item": f'{v["label"]}: {vacc}', "status": "overdue" if late > 0 else "due",
                      "days": int(max(0, late) * 30.4), "source": VAX_SOURCE, "vax": vid,
+                     "followup": "Catch-up dose at the next visit; record in the immunisation registry"})
+    if infant_missing:
+        gaps.append({"rule": "VAX", "item": "Catch-up review: infant doses missing (" + ", ".join(infant_missing) + "); give only what the catch-up schedule allows at this age",
+                     "status": "overdue", "days": 0, "source": VAX_SOURCE, "vax": "VAX-CATCHUP",
                      "followup": "Catch-up dose at the next visit; record in the immunisation registry"})
     if 84 <= m < 216:
         ds = days_since(p.get("last_school_exam"))

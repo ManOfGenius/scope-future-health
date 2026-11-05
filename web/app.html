@@ -260,6 +260,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0}
 .sync{font-size:.8rem;background:var(--good-soft);color:var(--good);padding:8px 10px;border-radius:8px}
 .code{font-family:var(--f-mono);font-size:1.1rem;letter-spacing:.2em;background:var(--surface-2);padding:6px 10px;border-radius:6px;display:inline-block}
 
+@media (max-width:860px){.cv-grid{grid-template-columns:1fr!important}}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -270,7 +271,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0}
     <button class="themebtn" id="themebtn" type="button"></button>
     <nav class="tabs" aria-label="Sections">
       <a href="#overview">Overview</a><a href="#worklist">Outreach worklist</a><a href="#family">Family view</a>
-      <a href="#family-app">Family app</a><a href="#safeguards">Safeguards</a><a href="#outcomes">Outcomes</a><a href="#governance">Governance</a>
+      <a href="#family-app">Family app</a><a href="#clinic">Clinic visit</a><a href="#safeguards">Safeguards</a><a href="#outcomes">Outcomes</a><a href="#governance">Governance</a>
     </nav>
   </div>
   <div class="glowline" aria-hidden="true"></div>
@@ -282,6 +283,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0}
   <section class="view" id="v-worklist" hidden></section>
   <section class="view" id="v-family" hidden></section>
   <section class="view" id="v-familyapp" hidden></section>
+  <section class="view" id="v-clinic" hidden></section>
   <section class="view" id="v-safeguards" hidden></section>
   <section class="view" id="v-outcomes" hidden></section>
   <section class="view" id="v-governance" hidden></section>
@@ -316,7 +318,8 @@ function gapVisible(p, g) {
   }
   return true;
 }
-function visibleGaps(p) { return p.gaps.filter(g => gapVisible(p, g)); }
+const CLOSED = new Set();   // gaps closed at a clinic visit: "pid|gapIndex"
+function visibleGaps(p) { return p.gaps.filter((g, i) => gapVisible(p, g) && !CLOSED.has(p.id + "|" + i)); }
 
 function live(p) {
   // recompute risk, confidence and priority under the current consent state
@@ -638,7 +641,7 @@ function familyPlan(h) {
     <ul>${items}</ul>
     ${h.slot && h.slot.why.length ? `<p class="tiny">Timing: ${esc(h.slot.why.join("; "))}.</p>` : ""}
     <p class="small">Invitation to <b>${esc(cp.first)}</b> (${esc(h.audience)}) by ${esc(h.channel.toLowerCase())}, in ${esc(h.lang)}.</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="to-msg">See it on the family's phone</button></div></div>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="to-msg">See it on the family's phone</button><button class="btn ghost" id="to-clinic">Open the visit checklist</button></div></div>`;
 }
 
 function renderFamily() {
@@ -663,6 +666,7 @@ function renderFamily() {
   </div>`;
   $("#fam-pick").onchange = e => openFamily(e.target.value);
   const tm = $("#to-msg"); if (tm) tm.onclick = () => { faInit(h); location.hash = "family-app"; };
+  const tc = $("#to-clinic"); if (tc) tc.onclick = () => { VISIT.hh = h.id; location.hash = "clinic"; };
   document.querySelectorAll("#v-family .node").forEach(n => { const go = () => $("#m-" + n.dataset.person).scrollIntoView({behavior: "smooth", block: "start"}); n.onclick = go; n.onkeydown = e => { if (e.key === "Enter") go(); }; });
   document.querySelectorAll("#v-family .tog input").forEach(i => i.onchange = () => { C(i.dataset.p)[i.dataset.k] = i.checked; const y = scrollY; renderFamily(); scrollTo(0, y); });
 }
@@ -1026,6 +1030,153 @@ function renderFamilyApp() {
   const send = $("#fa-send"); if (send) send.onclick = () => { FA.letterSent = true; re(); };
 }
 
+/* ================= CLINIC VISIT (clinician at the Family Health Day) ================= */
+const VISIT = {hh: null, results: {}};   // results[pid|gi] = {kind, value, outcome, referral, closed, declined}
+const keyOf = (pid, gi) => pid + "|" + gi;
+const MCHAT_RULES = ["WCV-MCHAT-18", "WCV-MCHAT-24"];
+const HB_RULES = ["WCV-CBC-12", "EARLY-CBC"];
+const A1C_RULES = ["IF-CORE", "DPP"];
+const RECALL_Y = {"IF-CORE": 3, "IF-CRC": 1, "IF-MAMMO": 2, "IF-CERV": 3, "IF-FUNDUS": 1, "IF-DEXA": 2, "IF-MOCA": 3, "LDCT": 1};
+const dateY = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"});
+function plusDays(iso, n) { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + Math.round(n)); return d.toISOString().slice(0, 10); }
+
+function decide(p, g, value) {
+  // decision support from the WCV standard thresholds and standard HbA1c cut-offs; the clinician confirms
+  if (MCHAT_RULES.includes(g.r)) {
+    const v = +value;
+    if (v <= 2) return {level: "ok", text: p.age * 12 < 24 ? "Low risk (0–2). Re-screen at the 24-month visit." : "Low risk (0–2). No further screen unless indicated.", referral: null};
+    if (v <= 7) return {level: "warn", text: "Moderate risk (3–7). Refer to neurodevelopment clinic and speech therapy within 4 weeks; primary-care follow-up at 1 month.", referral: {what: "Neurodevelopment clinic + speech therapy", days: 28}};
+    return {level: "crit", text: "High risk (8–20). Refer to neurodevelopment clinic and speech therapy within 2 weeks; primary-care follow-up at 1 month.", referral: {what: "Neurodevelopment clinic + speech therapy (urgent)", days: 14}};
+  }
+  if (HB_RULES.includes(g.r)) {
+    const v = +value, carrier = (p.clin && p.clin.hb != null) || false;
+    if (v >= 11) return {level: "ok", text: `Hb ${v} g/dL: no anaemia under the WCV threshold (11 g/dL).`, referral: null};
+    const hbb = [p.mother, p.father].filter(Boolean).some(x => P[x] && (P[x].genomic || []).includes("HBB"));
+    return {level: "warn", text: `Hb ${v} g/dL is below 11: etiologic evaluation required (MCV, RDW, iron studies).` + (hbb ? " A parent carries a haemoglobin variant: consider haemoglobin analysis before starting iron." : " If iron deficiency is confirmed: elemental iron 3–6 mg/kg once daily."), referral: {what: "Anaemia work-up and review", days: 7}};
+  }
+  if (A1C_RULES.includes(g.r)) {
+    const v = +value;
+    if (v < 5.7) return {level: "ok", text: `HbA1c ${v}%: normal range.`, referral: null};
+    if (v < 6.5) return {level: "warn", text: `HbA1c ${v}%: prediabetes range (5.7–6.4%). Offer the diabetes prevention programme; repeat in 12 months.`, referral: {what: "Diabetes prevention programme", days: 30}};
+    return {level: "crit", text: `HbA1c ${v}%: in the diabetes range (≥ 6.5%). Confirm with a repeat test, then start the diabetes care pathway.`, referral: {what: "Confirmatory HbA1c and diabetes clinic", days: 14}};
+  }
+  return null;
+}
+
+function recallFor(p, g, slotDate) {
+  if (RECALL_Y[g.r]) return {what: g.i.split(" (")[0], date: plusDays(slotDate, RECALL_Y[g.r] * 365)};
+  if (g.r === "WCV-VISIT" || g.r === "VAX") {
+    const m = p.age * 12, nx = D.rules.wcv_ages.find(x => x > m + 0.5);
+    if (nx) return {what: `Well-Child Visit at ${nx < 24 ? nx + " months" : nx / 12 + " years"}`, date: plusDays(slotDate, (nx - m) * 30.4)};
+  }
+  if (g.r === "SCH-ANNUAL") return {what: "Annual school health check", date: plusDays(slotDate, 365)};
+  return null;
+}
+
+function visitSummary(h) {
+  const slot = h.slot || {date: D.today, time: "10:00"};
+  const refs = [], recalls = [], done = [], declined = [];
+  for (const m of h.members) {
+    const p = P[m];
+    p.gaps.forEach((g, gi) => {
+      const r = VISIT.results[keyOf(m, gi)]; if (!r) return;
+      if (r.declined) { declined.push(`${p.first}: ${g.i}`); return; }
+      done.push(`${p.first}: ${g.i}${r.value != null && r.value !== "" ? ` · ${r.kind} ${r.value}` : ""}`);
+      if (r.referral) refs.push({who: p.first, what: r.referral.what, by: plusDays(slot.date, r.referral.days)});
+      if (g.r === "CASCADE-FH" || g.r === "CASCADE-HBOC" || g.r === "CASCADE-LYNCH") refs.push({who: p.first, what: "Genetic counselling", by: plusDays(slot.date, 42)});
+      const rc = recallFor(p, g, slot.date); if (rc) recalls.push({who: p.first, ...rc});
+    });
+  }
+  const uniq = (arr, k) => arr.filter((x, i) => arr.findIndex(y => k(y) === k(x)) === i);
+  return {refs, recalls: uniq(recalls, x => x.who + x.what).sort((a, b) => a.date.localeCompare(b.date)), done, declined};
+}
+
+function itemControl(p, g, gi) {
+  const k = keyOf(p.id, gi), r = VISIT.results[k];
+  const id = `cv-${p.id}-${gi}`;
+  if (r) {
+    const cls = r.declined ? "c-sys" : r.level === "crit" ? "c-over" : r.level === "warn" ? "c-due" : "c-ok";
+    const lab = r.declined ? "Declined, refusal recorded" : r.value != null && r.value !== "" ? `${r.kind} ${r.value} recorded` : "Done";
+    return `<div style="display:grid;gap:4px"><span class="chip ${cls}">${esc(lab)}</span>${r.outcome ? `<span class="small">${esc(r.outcome)}</span>` : ""}
+      <button class="btn ghost" data-undo="${k}" style="justify-self:start;padding:3px 10px;font-size:.78rem">Undo</button></div>`;
+  }
+  let input = "";
+  if (MCHAT_RULES.includes(g.r)) input = `<label class="small" style="display:flex;gap:6px;align-items:center">M-CHAT-R score<input type="number" min="0" max="20" id="${id}" style="width:64px" placeholder="0–20"></label>`;
+  else if (HB_RULES.includes(g.r)) input = `<label class="small" style="display:flex;gap:6px;align-items:center">Hb g/dL<input type="number" step="0.1" min="4" max="20" id="${id}" style="width:72px"></label>`;
+  else if (A1C_RULES.includes(g.r)) input = `<label class="small" style="display:flex;gap:6px;align-items:center">HbA1c %<input type="number" step="0.1" min="3" max="18" id="${id}" style="width:72px"></label>`;
+  const kind = MCHAT_RULES.includes(g.r) ? "M-CHAT-R" : HB_RULES.includes(g.r) ? "Hb" : A1C_RULES.includes(g.r) ? "HbA1c" : "";
+  const doneLab = g.r === "WCV-MCHAT-REF" ? "Referral booked" : g.r === "VAX" ? "Vaccines given" : g.r.startsWith("CASCADE") ? "Counselling booked" : g.r === "DEV-PRIORITY" ? "Surveillance done" : kind ? "Record" : "Done";
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${input}
+    <button class="btn" data-rec="${k}" data-kind="${kind}" data-input="${input ? id : ""}" style="padding:5px 12px;font-size:.8rem">${doneLab}</button>
+    <button class="btn ghost" data-dec="${k}" style="padding:5px 12px;font-size:.8rem" title="Parental or personal refusal is documented with a signature, as the WCV standard requires">Declined</button></div>`;
+}
+
+function renderClinic() {
+  const h = HH[VISIT.hh] || HH[currentFamily] || FEATURED[0];
+  VISIT.hh = h.id;
+  const slot = h.slot || {date: D.today, time: "10:00", why: []};
+  const sameDay = D.households.filter(x => x.slot && x.slot.date === slot.date && x.district === h.district).sort((a, b) => a.slot.time.localeCompare(b.slot.time));
+  const dayList = sameDay.map(x => `<button class="app-row" data-cv-hh="${x.id}" aria-current="${x.id === h.id}" style="${x.id === h.id ? "border-color:var(--teal);background:var(--teal-soft)" : ""}">
+      <span class="mono" style="min-width:44px">${esc(x.slot.time.slice(0, 5))}</span><span class="grow"><b>${esc(x.surname)}</b><span class="tiny muted">${x.members.filter(m => visibleGaps(P[m]).length).length} to see · ${esc(x.lang)}</span></span></button>`).join("");
+  const mem = h.members.map(m => P[m]).filter(p => p.gaps.length);
+  const cards = mem.map(p => {
+    const c = C(p.id), lv = live(p);
+    const rows = p.gaps.map((g, gi) => ({g, gi})).filter(({g}) => gapVisible(p, g) && g.s !== "system");
+    const items = rows.map(({g, gi}) => {
+      const mt = D.gap_meta[g.r] || {};
+      return `<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:12px;padding:10px 0;border-top:1px solid var(--line)">
+        <div style="display:grid;gap:3px"><span>${chip(g.s)} ${esc(g.i)}</span><span class="tiny muted">${esc(mt.source || "")}${mt.followup ? " · " + esc(mt.followup) : ""}</span></div>
+        ${itemControl(p, g, gi)}</div>`;
+    }).join("");
+    const pg = p.gaps.some(g => g.r === "PATHWAY-GAP");
+    const consentLine = CONSENT_KEYS.map(k => `<span class="chip ${c[k] ? "c-ok" : "c-sys"}" title="${CONSENT_LABEL[k]}">${CONSENT_LABEL[k]}${c[k] ? "" : ": no"}</span>`).join(" ");
+    return `<div class="panel" style="display:grid;gap:8px"><div class="mhead"><div><span class="nm">${esc(nameOf(p))}</span><span class="small muted"> · ${ROLE[p.role]}, ${ageTxt(p.age)}</span></div>${confB(lv.confidence)}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${consentLine}</div>
+      ${p.score ? `<p class="small"><span class="muted">${p.score.model === "adult" ? "3-year cardiometabolic risk" : "Developmental concern risk"}:</span> <b class="num">${pct(lv.risk, 1)}</b> <span class="muted num">(${lv.rr.toFixed(1)}× average; ${lv.factors.slice(0, 2).map(f => f[0]).join(", ")})</span></p>` : ""}
+      ${items || (pg ? `<p class="small">No funded comprehensive screening pathway: offer the community health check (blood pressure, blood glucose) available at this site.</p>` : `<p class="small muted">Nothing open for this visit.</p>`)}</div>`;
+  }).join("");
+  const sm = visitSummary(h);
+  const anyResult = Object.keys(VISIT.results).some(k => h.members.includes(k.split("|")[0]));
+  const famMsg = `Thank you for coming today. ${sm.refs.length ? `Your care team has booked ${sm.refs.length} follow-up appointment${sm.refs.length > 1 ? "s" : ""}; you can see the dates in S.C.O.P.E Family.` : "No follow-up appointment is needed."} ${sm.recalls.length ? `We will remind you before the next check on ${dateY(sm.recalls[0].date)}.` : ""}`;
+  $("#v-clinic").innerHTML = `
+  <div class="fam-head"><div style="display:grid;gap:6px"><span class="eyebrow">Clinic visit · ${esc(h.district)} Healthcare Centre · ${esc(dateTxt(slot.date))}</span>
+      <h2>The ${esc(h.surname)} household, ${esc(slot.time)}</h2>
+      <p class="lede">One visit for the whole family. Record results as you go; S.C.O.P.E applies the standard's thresholds, books follow-up within its timelines and sets the next recall. The clinician decides.</p></div></div>
+  <div style="display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:18px;align-items:start" class="cv-grid">
+    <div style="display:grid;gap:8px;align-content:start"><span class="eyebrow">Today at this centre</span>${dayList || `<p class="small muted">No other bookings.</p>`}</div>
+    <div style="display:grid;gap:14px">${cards}
+      <div class="panel" style="display:grid;gap:10px"><h3>Visit summary</h3>
+        ${anyResult ? `
+        <div class="grid2" style="gap:14px">
+          <div><span class="eyebrow">Follow-up booked</span>${sm.refs.length ? `<ul class="rules">${sm.refs.map(r => `<li><b>${esc(r.who)}</b>: ${esc(r.what)}, by ${esc(dateY(r.by))}</li>`).join("")}</ul>` : `<p class="small muted">None.</p>`}</div>
+          <div><span class="eyebrow">Next recalls</span>${sm.recalls.length ? `<ul class="rules">${sm.recalls.map(r => `<li><b>${esc(r.who)}</b>: ${esc(r.what)}, ${esc(dateY(r.date))}</li>`).join("")}</ul>` : `<p class="small muted">None yet.</p>`}</div></div>
+        ${sm.declined.length ? `<p class="small"><span class="muted">Declined and documented:</span> ${esc(sm.declined.join("; "))}</p>` : ""}
+        <div class="app-card"><span class="eyebrow">Message to the family (in the app, not WhatsApp)</span><span class="small">${esc(famMsg)}</span></div>
+        <div class="sync">Closed items have left the outreach worklist and the family's app. ${sm.done.length} recorded, ${sm.declined.length} declined.</div>` :
+        `<p class="small muted">Record the first result to see referrals, recalls and the family message.</p>`}</div>
+      <p class="disclaimer">Decision support only. Thresholds follow the DoH Well-Child Visit standard (M-CHAT-R, haemoglobin) and standard HbA1c cut-offs; the treating clinician confirms every diagnosis and referral.</p>
+    </div></div>`;
+  document.querySelectorAll("#v-clinic [data-cv-hh]").forEach(b => b.onclick = () => { VISIT.hh = b.dataset.cvHh; currentFamily = b.dataset.cvHh; renderClinic(); });
+  document.querySelectorAll("#v-clinic [data-rec]").forEach(b => b.onclick = () => {
+    const [pid, gi] = b.dataset.rec.split("|"), p = P[pid], g = p.gaps[+gi];
+    const inp = b.dataset.input ? $("#" + b.dataset.input) : null;
+    if (inp && inp.value === "") { inp.focus(); inp.setAttribute("aria-invalid", "true"); return; }
+    const value = inp ? inp.value : null;
+    let dec = inp ? decide(p, g, value) : null;
+    if (g.r === "WCV-MCHAT-REF") { const sc = +((g.i.match(/score (\d+)/) || [0, 3])[1]); dec = {level: sc >= 8 ? "crit" : "warn", text: `Referral booked to neurodevelopment clinic and speech therapy, ${sc >= 8 ? "within 2 weeks" : "within 4 weeks"} as the WCV standard sets.`, referral: {what: "Neurodevelopment clinic + speech therapy" + (sc >= 8 ? " (urgent)" : ""), days: sc >= 8 ? 14 : 28}}; }
+    VISIT.results[b.dataset.rec] = {kind: b.dataset.kind, value, outcome: dec ? dec.text : "", level: dec ? dec.level : "ok", referral: dec ? dec.referral : null};
+    CLOSED.add(b.dataset.rec);
+    const y = scrollY; renderClinic(); scrollTo(0, y);
+  });
+  document.querySelectorAll("#v-clinic [data-dec]").forEach(b => b.onclick = () => {
+    VISIT.results[b.dataset.dec] = {declined: true, outcome: "Refusal documented with signature on the facility form."}; CLOSED.add(b.dataset.dec);
+    const y = scrollY; renderClinic(); scrollTo(0, y);
+  });
+  document.querySelectorAll("#v-clinic [data-undo]").forEach(b => b.onclick = () => {
+    delete VISIT.results[b.dataset.undo]; CLOSED.delete(b.dataset.undo); const y = scrollY; renderClinic(); scrollTo(0, y);
+  });
+}
+
 /* ================= SAFEGUARDS ================= */
 let AUD_DIM = "Nationality group";
 function calibChart(m, title) {
@@ -1196,7 +1347,7 @@ function renderGovernance() {
 }
 
 /* ================= ROUTER ================= */
-const VIEWS = {home: renderHome, overview: renderOverview, worklist: renderWorklist, family: renderFamily, familyapp: renderFamilyApp, safeguards: renderSafeguards, outcomes: renderOutcomes, governance: renderGovernance};
+const VIEWS = {home: renderHome, overview: renderOverview, worklist: renderWorklist, family: renderFamily, familyapp: renderFamilyApp, clinic: renderClinic, safeguards: renderSafeguards, outcomes: renderOutcomes, governance: renderGovernance};
 function route() {
   let h = (location.hash || "#home").slice(1);
   if (h === "family-app") h = "familyapp";
