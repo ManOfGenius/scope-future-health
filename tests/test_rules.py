@@ -56,3 +56,19 @@ def test_dpp_only_for_eligible_adults_without_known_diabetes(data):
         if any(g["r"] == "DPP" for g in p["gaps"]):
             assert 18 <= p["age"] <= 75
             assert not p["clin"]["t2d"]
+
+
+def test_moderate_mchat_asks_for_follow_up_interview():
+    """M-CHAT-R 3-7 items name the Follow-Up interview; 8-20 go straight to referral."""
+    import json
+    from pathlib import Path
+    D = json.loads((Path(__file__).resolve().parents[1] / "data" / "scope.json").read_text())
+    seen = {"mod": 0, "high": 0}
+    for p in D["people"].values():
+        for g in p["gaps"]:
+            if g["r"] == "WCV-MCHAT-REF":
+                if "moderate" in g["i"]:
+                    assert "Follow-Up interview" in g["i"]; seen["mod"] += 1
+                else:
+                    assert "high risk" in g["i"]; seen["high"] += 1
+    assert seen["mod"] > 0

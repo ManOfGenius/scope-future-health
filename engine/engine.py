@@ -98,7 +98,8 @@ def child_gaps(p):
     score = p["mchat24"] if p["mchat24"] is not None else p["mchat18"]
     if score is not None and score >= 3:
         if (int(p["id"][1:]) * 7 % 10) < 4:
-            gaps.append({"rule": "WCV-MCHAT-REF", "item": f"Positive M-CHAT-R (score {score}) — referral not completed",
+            gaps.append({"rule": "WCV-MCHAT-REF", "item": (f"M-CHAT-R score {score} (high risk): referral not completed" if score >= 8
+                         else f"M-CHAT-R score {score} (moderate): Follow-Up interview and referral not recorded"),
                          "status": "overdue", "days": 45, "source": "WCV §3 referral timelines",
                          "followup": "Neurodevelopment + speech therapy " + ("within 2 weeks" if score >= 8 else "within 4 weeks")})
     # low Hb not evaluated

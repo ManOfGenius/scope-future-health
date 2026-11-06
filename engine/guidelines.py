@@ -31,7 +31,7 @@ CHILD_RULES = [
     {
         "id": "WCV-MCHAT-18", "pathway": "Well-Child Visit", "item": "M-CHAT-R autism screen (18 m)",
         "age_from_m": 18, "age_to_m": 24, "source": "WCV §3 Development; KPI 8 (target 100%)",
-        "followup": "Score 3-7: neurodevelopment + speech referral within 4 weeks; 8-20: within 2 weeks",
+        "followup": "Score 3-7: M-CHAT-R/F Follow-Up interview, then neurodevelopment + speech referral within 4 weeks; 8-20: referral within 2 weeks (Follow-Up optional)",
     },
     {
         "id": "WCV-MCHAT-24", "pathway": "Well-Child Visit", "item": "M-CHAT-R autism screen (24 m)",
@@ -57,7 +57,7 @@ CHILD_RULES = [
     {
         "id": "WCV-BP", "pathway": "Well-Child Visit", "item": "Blood pressure (3-6 y; <3 y only if high-risk)",
         "age_from_m": 36, "age_to_m": 84, "source": "WCV §3 Blood pressure",
-        "followup": "High-risk <3 y: CKD, diabetes, obesity, prematurity, OSA, repaired coarctation",
+        "followup": "Classify by percentile for age, sex and height (AAP 2017); high-risk <3 y: CKD, diabetes, obesity, prematurity, OSA, repaired coarctation",
     },
     {
         "id": "WCV-ORAL", "pathway": "Well-Child Visit", "item": "Dentist / hygienist oral screen",

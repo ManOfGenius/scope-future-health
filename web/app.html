@@ -1101,6 +1101,7 @@ const ICD = {
 };
 const PROTOCOL = {
   DEV: [{id: "mchat", label: "M-CHAT-R score", type: "number", unit: "0–20", min: 0, max: 20, when: p => p.age * 12 >= 16 && p.age * 12 < 36},
+        {id: "mchatfu", label: "M-CHAT-R/F Follow-Up interview score (only if M-CHAT-R is 3–7)", type: "number", unit: "items failed", min: 0, max: 20, when: p => p.age * 12 >= 16 && p.age * 12 < 36},
         {id: "milestones", label: "Developmental milestones for age", type: "choice", options: ["Age-appropriate", "Concern"]},
         {id: "speech", label: "Speech and language", type: "choice", options: ["Age-appropriate", "Delay"]},
         {id: "hearingdev", label: "Parent reports hearing concern", type: "choice", options: ["No", "Yes"]},
@@ -1126,7 +1127,7 @@ const PROTOCOL = {
   WCV: [{id: "growthc", label: "Growth and BMI centile", type: "choice", options: ["Normal", "Concern"]},
         {id: "vision", label: "Vision", type: "choice", options: ["Pass", "Refer"], when: p => p.age >= 3},
         {id: "hearing", label: "Hearing", type: "choice", options: ["Pass", "Refer"], when: p => p.age >= 4},
-        {id: "bpc", label: "Blood pressure", type: "choice", options: ["Normal", "Elevated"], when: p => p.age >= 3},
+        {id: "bpc", label: "Blood pressure percentile for age, sex and height (AAP 2017 tables)", type: "choice", options: ["Below 90th", "Elevated (90th to <95th)", "Stage 1 (95th or above)", "Stage 2 (95th + 12 mmHg or above)"], when: p => p.age >= 3},
         {id: "oral", label: "Oral health", type: "choice", options: ["No caries", "Caries"]},
         {id: "guidance", label: "Anticipatory guidance given", type: "check"}],
   IMM: [],
@@ -1152,7 +1153,12 @@ function suggest(p, ps, f) {
     const m = n("mchat");
     if (m != null) {
       if (m <= 2) add("ok", "M-CHAT-R low risk (0–2).", {}, ["Z13.42"]);
-      else if (m <= 7) add("warn", "M-CHAT-R moderate risk (3–7): refer within 4 weeks; primary-care follow-up at 1 month.", {ref: [["Neurodevelopment clinic", 28], ["Speech and language therapy", 28]]}, ["Z13.42", "R62.50"]);
+      else if (m <= 7) {
+        const fu = n("mchatfu");
+        if (fu == null) add("warn", "M-CHAT-R moderate risk (3–7): give the M-CHAT-R/F Follow-Up interview now (only the failed items). DoH WCV standard: neurodevelopment and speech referral within 4 weeks.", {}, ["Z13.42"]);
+        else if (fu >= 2) add("warn", `Follow-Up interview positive (${fu} items): refer within 4 weeks for diagnostic evaluation and early intervention.`, {ref: [["Neurodevelopment clinic", 28], ["Speech and language therapy", 28]]}, ["Z13.42", "R62.50"]);
+        else add("info", `Follow-Up interview negative (${fu} item${fu === 1 ? "" : "s"}): screen negative by the M-CHAT-R/F algorithm; rescreen at the next visit. The DoH WCV standard still lists referral for 3–7: your call, recorded with the encounter.`, {}, ["Z13.42"]);
+      }
       else add("crit", "M-CHAT-R high risk (8–20): refer within 2 weeks.", {ref: [["Neurodevelopment clinic", 14], ["Speech and language therapy", 14]]}, ["Z13.42", "R62.50"]);
     }
     if (f.milestones === "Concern") add("warn", "Milestone concern: developmental assessment.", {ref: [["Neurodevelopment clinic", 28]]}, ["R62.50"]);
@@ -1169,6 +1175,7 @@ function suggest(p, ps, f) {
   if (ps.includes("CMR") || ps.includes("COM")) {
     const s = n("sbp"), d = n("dbp");
     if (s != null && d != null) {
+      // adult categories: ACC/AHA 2017 (Whelton et al., Hypertension 2018;71:e13); 140/90 confirmation threshold as in ESH 2023
       if (s >= 180 || d >= 120) add("crit", `BP ${s}/${d}: hypertensive urgency range, same-day physician review.`, {}, ["R03.0"]);
       else if (s >= 140 || d >= 90) add("warn", `BP ${s}/${d}: confirm with repeat or ambulatory readings.`, {}, ["R03.0"]);
       else if (s >= 130 || d >= 80) add("warn", `BP ${s}/${d}: elevated; lifestyle advice, recheck in 3–6 months.`, {counsel: ["Healthy eating and activity"]});
@@ -1204,9 +1211,12 @@ function suggest(p, ps, f) {
     if (f.hearing === "Refer") add("warn", "Abnormal hearing: follow-up within 7 days, specialist within 2–4 weeks.", {ref: [["Audiology", 14]]}, ["Z00.121"]);
     if (f.oral === "Caries") add("warn", "Caries: dental referral.", {ref: [["Dental", 28]]}, ["Z00.121"]);
     if (f.growthc === "Concern") add("warn", "Growth concern: dietitian and paediatric follow-up.", {ref: [["Dietitian", 28]]}, ["Z00.121"]);
-    if (f.bpc === "Elevated") add("warn", "Elevated BP: repeat measurement; consider renal causes.", {}, ["Z00.121"]);
+    // AAP 2017 Clinical Practice Guideline (Flynn et al., Pediatrics 2017;140:e20171904), children 1-12 y by percentile
+    if (f.bpc && f.bpc.startsWith("Elevated")) add("warn", "Elevated BP (90th to <95th percentile): lifestyle advice, recheck in 6 months (AAP 2017).", {counsel: ["Healthy eating and activity"]}, ["R03.0"]);
+    if (f.bpc && f.bpc.startsWith("Stage 1")) add("warn", "Stage 1 BP (95th percentile or above): recheck in 1–2 weeks; if it persists, upper and lower limb readings and evaluation (AAP 2017).", {}, ["R03.0"]);
+    if (f.bpc && f.bpc.startsWith("Stage 2")) add("crit", "Stage 2 BP: recheck or refer within 1 week; same-day emergency care if symptomatic or more than 30 mmHg above the 95th percentile (AAP 2017).", {ref: [["Paediatric nephrology or cardiology", 7]]}, ["R03.0"]);
     const wk = ["vision", "hearing", "oral", "growthc", "bpc"];
-    if (wk.some(k => f[k]) && !wk.some(k => ["Refer", "Caries", "Concern", "Elevated"].includes(f[k]))) add("ok", "Well-Child Visit items recorded so far are normal.", {}, ["Z00.129"]);
+    if (wk.some(k => f[k]) && !wk.some(k => f[k] && (["Refer", "Caries", "Concern"].includes(f[k]) || /^(Elevated|Stage)/.test(f[k])))) add("ok", "Well-Child Visit items recorded so far are normal.", {}, ["Z00.129"]);
   }
   if (ps.includes("SCH")) {
     [["visions", "Ophthalmology"], ["hearings", "Audiology"]].forEach(([k, r]) => { if (f[k] === "Refer") add("warn", `${r} referral from the school check.`, {ref: [[r, 28]]}); });
@@ -1373,7 +1383,7 @@ function encounterView(a) {
   return header + `
   <div class="panel"><h3>Why this visit</h3>${why}${risk}<p class="disclaimer">Predicted need set the purpose of this visit. The findings below and your conclusions decide what happens next.</p></div>
   <div class="panel" style="display:grid;gap:12px"><h3>Examination protocol</h3>${protocol}</div>
-  <div class="panel" style="display:grid;gap:8px"><h3>Decision support</h3>${sugList}<p class="tiny muted">DoH Well-Child Visit thresholds (M-CHAT-R, haemoglobin, hearing timelines) and standard blood pressure, HbA1c, LDL and glucose cut-offs. You decide.</p></div>
+  <div class="panel" style="display:grid;gap:8px"><h3>Decision support</h3>${sugList}<p class="tiny muted">Sources: DoH Well-Child Visit standard (M-CHAT-R, haemoglobin, hearing timelines); M-CHAT-R/F algorithm (Robins et al., Pediatrics 2014); children's blood pressure by percentile (AAP 2017); adult blood pressure (ACC/AHA 2017, ESH 2023); ADA HbA1c and glucose cut-offs. You decide.</p></div>
   <div class="panel" style="display:grid;gap:12px"><h3>Orders and acts</h3>
     <div><span class="eyebrow">Laboratory</span><div class="cvfields">${chk(LABS, dr.labs, "lab")}</div></div>
     <div><span class="eyebrow">Referrals</span>${dr.refs.length ? `<ul class="rules">${dr.refs.map((r, i) => `<li>${esc(r.to)}, by <input type="date" id="rb-${a.id}-${i}" data-refdate="${i}" value="${r.by}" style="font-size:.85rem"> <button class="btn ghost" data-refdel="${i}" style="padding:1px 8px;font-size:.72rem">Remove</button></li>`).join("")}</ul>` : `<p class="small muted">None yet.</p>`}
