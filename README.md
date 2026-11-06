@@ -8,6 +8,11 @@ Submitted to the **Future Health Digital Innovation Challenge 2026 · Population
 
 > **All data in this repository is synthetic.** No real patient record is used. Rates are anchored to published UAE figures where available (see *Validation*).
 
+## Demo
+
+- [Live prototype](https://claude.ai/artifact/Hw8xXdNgx5Q8cG8BHWvKyp)
+- [3-minute video walkthrough](https://youtu.be/HYKYDbypiS0)
+
 ## Documents
 
 - [Business case and pilot plan](docs/business-case.md)
