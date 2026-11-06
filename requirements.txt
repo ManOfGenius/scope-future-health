@@ -8,3 +8,4 @@ pytest>=8
 playwright>=1.44
 # production API server (the app itself is dependency-free WSGI)
 gunicorn>=22
+markdown>=3.4  # build-time: renders docs/ into the web app

@@ -11,7 +11,7 @@ async def main():
             pg.on("console", lambda m: errs.append(f"{m.type}: {m.text}") if m.type == "error" and "TUNNEL" not in m.text else None)
             pg.on("pageerror", lambda e: errs.append(f"pageerror: {e}"))
             await pg.goto(URL, wait_until="domcontentloaded"); await pg.wait_for_selector("html[data-ready]"); await pg.wait_for_timeout(300)
-            for v in ("home", "overview", "worklist", "family", "family-app", "safeguards", "outcomes", "governance"):
+            for v in ("home", "overview", "worklist", "family", "family-app", "safeguards", "outcomes", "governance", "docs", "docs-technical"):
                 await pg.evaluate(f"location.hash='{v}'"); await pg.wait_for_timeout(250)
                 if await pg.evaluate("document.documentElement.scrollWidth > innerWidth + 1"): errs.append(f"overflow {v} {w}")
                 if v in ("home", "family-app"): await pg.screenshot(path=f"/tmp/scope-shots-s-{v}-{scheme}-{w}.png", full_page=True)

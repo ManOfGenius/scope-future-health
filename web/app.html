@@ -70,6 +70,30 @@ nav.tabs a[aria-current="page"]{opacity:1;background:rgba(255,255,255,.12);box-s
 main{padding-block:26px 60px}
 section.view{display:grid;gap:22px}
 .lede{max-width:70ch;color:var(--ink-2)}
+.doc-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.doc-tabs a{padding:8px 14px;border:1px solid var(--line);border-radius:999px;text-decoration:none;color:var(--ink-2);background:var(--surface);font-weight:600;font-size:.9rem}
+.doc-tabs a[aria-selected="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.doc-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;align-items:start}
+.doc-toc{position:sticky;top:120px;display:grid;gap:2px;font-size:.84rem}
+.doc-toc button{all:unset;cursor:pointer;padding:5px 10px;border-radius:6px;color:var(--ink-2)}
+.doc-toc button:hover,.doc-toc button:focus-visible{background:var(--surface-2);color:var(--ink)}
+.doc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:clamp(18px,4vw,40px);box-shadow:var(--shadow);min-width:0;line-height:1.6}
+.doc>*{max-width:78ch}
+.doc p,.doc ul,.doc ol{margin:.75em 0}.doc li{margin:.25em 0}.doc ul,.doc ol{padding-left:1.4em}
+.doc h1{font-family:var(--f-display);font-size:1.8rem;margin:0 0 4px}
+.doc h1+p{color:var(--muted);margin-top:0}
+.doc h2{margin:2em 0 .5em;padding-top:.6em;border-top:1px solid var(--line);scroll-margin-top:130px}
+.doc h3{margin:1.4em 0 .4em}
+.doc table{max-width:none;margin:.8em 0;font-size:.84rem}
+.doc .tbl-wrap{max-width:none;margin:.8em 0}
+.doc th,.doc td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+.doc th{background:var(--surface-2);font-weight:600}
+.doc code{font-family:var(--f-mono);font-size:.86em;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+.doc pre{background:var(--surface-2);padding:12px 14px;border-radius:8px;overflow-x:auto}
+.doc pre code{background:none;padding:0}
+.doc img{max-width:100%;height:auto;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;display:block;margin:1em 0}
+.doc a{color:var(--teal-ink)}
+@media (max-width:900px){.doc-layout{grid-template-columns:1fr}.doc-toc{display:none}}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);min-width:0}
 .panel>h3{margin-bottom:10px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:18px}
@@ -277,7 +301,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0}
     <button class="themebtn" id="themebtn" type="button"></button>
     <nav class="tabs" aria-label="Sections">
       <a href="#overview">Overview</a><a href="#worklist">Outreach worklist</a><a href="#family">Family view</a>
-      <a href="#family-app">Family app</a><a href="#clinic">Clinician</a><a href="#safeguards">Safeguards</a><a href="#outcomes">Outcomes</a><a href="#governance">Governance</a>
+      <a href="#family-app">Family app</a><a href="#clinic">Clinician</a><a href="#safeguards">Safeguards</a><a href="#outcomes">Outcomes</a><a href="#governance">Governance</a><a href="#docs">Documents</a>
     </nav>
   </div>
   <div class="glowline" aria-hidden="true"></div>
@@ -293,6 +317,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0}
   <section class="view" id="v-safeguards" hidden></section>
   <section class="view" id="v-outcomes" hidden></section>
   <section class="view" id="v-governance" hidden></section>
+  <section class="view" id="v-docs" hidden></section>
 </main>
 <div class="tip" id="tip" hidden></div>
 
@@ -448,7 +473,7 @@ function renderHome() {
     <p class="fullname">Screening &amp; Care Orchestration for Prevention Everywhere</p>
     <p class="slogan">Every family seen.<br>Every risk reached, in time.</p>
     <p class="slogan-ar" lang="ar" dir="rtl">نرى كل أسرة، ونبلغ كل خطر في وقته.</p>
-    <div class="cta"><a class="btn big" href="#overview">Open the health-team console</a><a class="btn ghost big" href="#family-app">See the family experience</a></div>
+    <div class="cta"><a class="btn big" href="#overview">Open the health-team console</a><a class="btn ghost big" href="#family-app">See the family experience</a><a class="btn ghost big" href="#docs">Read the business case and technical documentation</a></div>
   </div>
   <div class="pillars">${pillars}</div>
   <div class="proof">
@@ -1531,6 +1556,7 @@ function renderOutcomes() {
 
 /* ================= GOVERNANCE ================= */
 const BENCH = /*__BENCH__*/null;
+const DOCS = /*__DOCS__*/null;   // the business case and technical documentation, rendered at build time from docs/*.md
 function interopPanel() {
   const rs = [["Patient", "Person, language, household link"], ["Group", "Household"], ["RelatedPerson", "Parent–child links"],
     ["DetectedIssue", "Each care gap with its rule, source and follow-up"], ["ImmunizationRecommendation", "Missing or due vaccines"],
@@ -1599,14 +1625,27 @@ function renderGovernance() {
 }
 
 /* ================= ROUTER ================= */
-const VIEWS = {home: renderHome, overview: renderOverview, worklist: renderWorklist, family: renderFamily, familyapp: renderFamilyApp, clinic: renderClinician, safeguards: renderSafeguards, outcomes: renderOutcomes, governance: renderGovernance};
+let DOC_TAB = "business";
+function renderDocs() {
+  const d = DOCS && DOCS[DOC_TAB];
+  const tab = (k, href, label) => `<a href="${href}" role="tab" aria-selected="${DOC_TAB === k}">${label}</a>`;
+  $("#v-docs").innerHTML = `
+  <div style="display:grid;gap:8px"><span class="eyebrow">Documents</span><h2>The business case and the technical documentation</h2>
+  <p class="lede">Both documents are part of the submission. They describe the same platform you can try in the other screens; every figure in them comes from the synthetic population or from the sources they cite.</p></div>
+  <div class="doc-tabs" role="tablist" aria-label="Documents">${tab("business", "#docs", "Business case and pilot plan")}${tab("technical", "#docs-technical", "Technical documentation")}</div>
+  ${d ? `<div class="doc-layout"><nav class="doc-toc" aria-label="Contents">${d.toc.map(([id, t]) => `<button data-to="${esc(id)}">${esc(t)}</button>`).join("")}</nav>
+  <article class="doc">${d.html}</article></div>` : `<p class="muted">The documents are not bundled in this build.</p>`}`;
+  document.querySelectorAll("#v-docs .doc-toc button").forEach(b => b.onclick = () => document.getElementById(b.dataset.to)?.scrollIntoView({behavior: "smooth", block: "start"}));
+}
+const VIEWS = {home: renderHome, overview: renderOverview, worklist: renderWorklist, family: renderFamily, familyapp: renderFamilyApp, clinic: renderClinician, safeguards: renderSafeguards, outcomes: renderOutcomes, governance: renderGovernance, docs: renderDocs};
 function route() {
   let h = (location.hash || "#home").slice(1);
   if (h === "family-app") h = "familyapp";
+  else if (h === "docs" || h === "docs-technical") { DOC_TAB = h === "docs" ? "business" : "technical"; h = "docs"; }
   else if (h.startsWith("family-")) { const id = h.slice(7); if (HH[id]) currentFamily = id; h = "family"; }
   if (!VIEWS[h]) h = "home";
   for (const k of Object.keys(VIEWS)) $("#v-" + k).hidden = k !== h;
-  const href = h === "familyapp" ? "#family-app" : "#" + h;
+  const href = h === "familyapp" ? "#family-app" : h === "docs" ? "#docs" : "#" + h;
   document.querySelectorAll("nav.tabs a").forEach(a => a.setAttribute("aria-current", a.getAttribute("href") === href ? "page" : "false"));
   VIEWS[h]();
   scrollTo(0, 0);

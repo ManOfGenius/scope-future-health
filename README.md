@@ -8,6 +8,13 @@ Submitted to the **Future Health Digital Innovation Challenge 2026 · Population
 
 > **All data in this repository is synthetic.** No real patient record is used. Rates are anchored to published UAE figures where available (see *Validation*).
 
+## Documents
+
+- [Business case and pilot plan](docs/business-case.md)
+- [Technical documentation](docs/technical-documentation.md): architecture, models, data, security, regulatory mapping, DPIA, tests
+
+Both are also built into the web app, under **Documents**.
+
 ## What it does
 
 | Layer | What happens | Where |
