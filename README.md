@@ -72,11 +72,11 @@ Outcome simulation (600 people contacted per 90-day cycle, 200 cycles): S.C.O.P.
 
 ## Tests
 
-`make test` runs 38 tests covering clinic and clinician assignment, session timing, capacity, treating-physician continuity, Ramadan and shift-work rules, encounter signing rights and FHIR output, guideline windows, sex-specific rules, immunisation schedule conformance, Thiqa eligibility, genomic ethics for minors, consent-gated cascade, small-cell suppression, invitations free of condition names, role and purpose-of-use enforcement, consent recomputation, revoked invitations after opt-out, audit of refusals, and the rules-only fallback when the model is switched off.
+`make test` runs 39 tests covering clinic and clinician assignment, session timing, capacity, treating-physician continuity, Ramadan and shift-work rules, encounter signing rights and FHIR output, guideline windows, sex-specific rules, immunisation schedule conformance, Thiqa eligibility, genomic ethics for minors, consent-gated cascade, small-cell suppression, invitations free of condition names, role and purpose-of-use enforcement, consent recomputation, revoked invitations after opt-out, audit of refusals, and the rules-only fallback when the model is switched off.
 
 ## Scalability (single laptop core)
 
-From `bench/results.json`: vectorised scoring of 3.8 M people in under 0.1 s; full consent-aware evaluation ≈ 15 µs per person (under a minute for the emirate on one core); `$family-plan` p95 ≈ 0.3 ms in-process.
+From `bench/results.json`: vectorised scoring of 3.8 M people in under 0.1 s; full consent-aware evaluation ≈ 10 µs per person (under a minute for the emirate on one core); `$family-plan` p95 ≈ 0.3 ms in-process.
 
 ## Repository
 
