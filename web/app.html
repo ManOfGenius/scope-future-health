@@ -296,10 +296,17 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0}
 </main>
 <div class="tip" id="tip" hidden></div>
 
-<script id="bayt-data" type="application/json">/*__DATA__*/</script>
-<script>
-"use strict";
-const D = JSON.parse(document.getElementById("bayt-data").textContent);
+<script id="bayt-data" type="application/octet-stream">/*__DATA__*/</script>
+<script type="module">
+// The engine output ships gzip-compressed (about 0.8 MB instead of 6.2 MB) and is unpacked once at load.
+async function loadData() {
+  const raw = document.getElementById("bayt-data").textContent.trim();
+  if (raw.startsWith("{")) return JSON.parse(raw);
+  const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return JSON.parse(await new Response(stream).text());
+}
+const D = await loadData();
 const P = D.people, HH = Object.fromEntries(D.households.map(h => [h.id, h]));
 const L = D.labels, S = D.simulation, M = D.models;
 const $ = (s, el = document) => el.querySelector(s);
@@ -1596,4 +1603,6 @@ function route() {
 }
 addEventListener("hashchange", route);
 route();
+window.__scope = {HH, FA, clinicOf, MODEL_GATE};   // read by the automated browser test
+document.documentElement.dataset.ready = "1";
 </script>

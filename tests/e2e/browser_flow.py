@@ -10,7 +10,7 @@ async def main():
             pg = await ctx.new_page()
             pg.on("console", lambda m: errs.append(f"{m.type}: {m.text}") if m.type == "error" and "TUNNEL" not in m.text else None)
             pg.on("pageerror", lambda e: errs.append(f"pageerror: {e}"))
-            await pg.goto(URL, wait_until="domcontentloaded"); await pg.wait_for_timeout(700)
+            await pg.goto(URL, wait_until="domcontentloaded"); await pg.wait_for_selector("html[data-ready]"); await pg.wait_for_timeout(300)
             for v in ("home", "overview", "worklist", "family", "family-app", "safeguards", "outcomes", "governance"):
                 await pg.evaluate(f"location.hash='{v}'"); await pg.wait_for_timeout(250)
                 if await pg.evaluate("document.documentElement.scrollWidth > innerWidth + 1"): errs.append(f"overflow {v} {w}")
@@ -26,7 +26,7 @@ async def main():
                 await pg.evaluate("location.hash='family-app'"); await pg.wait_for_timeout(300)
                 # default policy: WhatsApp shows a content-free notice, no clinic, date or invite options
                 chat = await pg.inner_text("#fa-chat")
-                clinic = await pg.evaluate("clinicOf(HH[FA.hh])")
+                clinic = await pg.evaluate("__scope.clinicOf(__scope.HH[__scope.FA.hh])")
                 strict_ok = clinic not in chat and await pg.evaluate("document.querySelectorAll('#fa-chat .qr button').length") == 1
                 print("strict WhatsApp notice content-free:", strict_ok)
                 if not strict_ok: errs.append("strict WhatsApp mode leaks detail")
