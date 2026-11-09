@@ -1,0 +1,151 @@
+{
+ "sensitivity_undiagnosed_diabetes": {
+  "S.C.O.P.E without the testing-history input": 0.8016254915553331
+ },
+ "auc_by_group_undiagnosed_diabetes": {
+  "Mexican American": {
+   "n": 772,
+   "cases": 55,
+   "S.C.O.P.E model (frozen)": 0.815,
+   "FINDRISC": 0.784,
+   "Age only": 0.718
+  },
+  "Other Hispanic": {
+   "n": 695,
+   "cases": 54,
+   "S.C.O.P.E model (frozen)": 0.814,
+   "FINDRISC": 0.82,
+   "Age only": 0.735
+  },
+  "Non-Hispanic White": {
+   "n": 2107,
+   "cases": 68,
+   "S.C.O.P.E model (frozen)": 0.823,
+   "FINDRISC": 0.789,
+   "Age only": 0.69
+  },
+  "Non-Hispanic Black": {
+   "n": 1655,
+   "cases": 109,
+   "S.C.O.P.E model (frozen)": 0.755,
+   "FINDRISC": 0.756,
+   "Age only": 0.728
+  },
+  "Non-Hispanic Asian": {
+   "n": 810,
+   "cases": 58,
+   "S.C.O.P.E model (frozen)": 0.753,
+   "FINDRISC": 0.734,
+   "Age only": 0.746
+  }
+ },
+ "data": "NHANES 2017-March 2020 pre-pandemic (CDC/NCHS), public-use files",
+ "flow": {
+  "participants": 15560,
+  "aged_20_79": 8550,
+  "without_diagnosed_diabetes": 7292,
+  "analysed": 6339
+ },
+ "undiagnosed_diabetes": {
+  "S.C.O.P.E model (frozen)": {
+   "auc": 0.7978032071553157,
+   "top10": 0.3945911821843201,
+   "auc_ci": [
+    0.7727116538935586,
+    0.8243509742676876
+   ]
+  },
+  "FINDRISC": {
+   "auc": 0.7719881899952927,
+   "top10": 0.38094121702649253,
+   "auc_ci": [
+    0.7454062371244288,
+    0.8000197222709358
+   ]
+  },
+  "Age only": {
+   "auc": 0.6813269179116502,
+   "top10": 0.16946855683388964,
+   "auc_ci": [
+    0.6578608658624332,
+    0.7022024654301364
+   ]
+  },
+  "difference_scope_minus_findrisc": {
+   "auc": 0.02581501716002299,
+   "ci": [
+    0.012758846270564637,
+    0.03893486151376694
+   ]
+  },
+  "cases": 357,
+  "weighted_prevalence": 0.036763573432431876,
+  "prevalence_by_scope_decile": [
+   0.0009042164655565638,
+   0.0016308256766408352,
+   0.011077489582604638,
+   0.010491123654588642,
+   0.039560586345019265,
+   0.02187647159267462,
+   0.042362181187662856,
+   0.04403497035389306,
+   0.08627391656658656,
+   0.15871932835301023
+  ]
+ },
+ "dysglycaemia": {
+  "S.C.O.P.E model (frozen)": {
+   "auc": 0.758908905966483,
+   "top10": 0.2303273905241541,
+   "auc_ci": [
+    0.7454326026843845,
+    0.7707198324214519
+   ]
+  },
+  "FINDRISC": {
+   "auc": 0.7329505345332514,
+   "top10": 0.2297844739700639,
+   "auc_ci": [
+    0.719281750658226,
+    0.7450017397153526
+   ]
+  },
+  "Age only": {
+   "auc": 0.7161969715058272,
+   "top10": 0.17614415724596996,
+   "auc_ci": [
+    0.7015332956295904,
+    0.7317992388159551
+   ]
+  },
+  "difference_scope_minus_findrisc": {
+   "auc": 0.025958371433231542,
+   "ci": [
+    0.016100215300682636,
+    0.036056481020391905
+   ]
+  },
+  "cases": 2209,
+  "weighted_prevalence": 0.266115579334649,
+  "prevalence_by_scope_decile": [
+   0.021948717712770734,
+   0.07251884605766033,
+   0.14148281928468653,
+   0.20504544705210184,
+   0.2951138519091772,
+   0.2773909000042988,
+   0.3644658935826229,
+   0.42178599282648455,
+   0.4562466282480856,
+   0.6407459032967368
+  ]
+ },
+ "notes": [
+  "Model applied as shipped, no refitting; segment offsets not applied.",
+  "Measured HbA1c is the outcome and is never a predictor; history comes from the questionnaire.",
+  "Non-Hispanic Asian stands in for South Asian ancestry; no genomic data.",
+  "FINDRISC fruit-and-vegetable item unavailable (scored 0 for all).",
+  "Fasting glucose exists only for the fasting subsample; others are classified on HbA1c.",
+  "Weighted with WTMECPRP; 95% intervals from 400 PSU-within-stratum bootstrap replicates."
+ ]
+}

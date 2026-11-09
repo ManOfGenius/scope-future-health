@@ -78,6 +78,8 @@ curl -H "Authorization: Bearer clinician-demo" -H "X-Purpose-Of-Use: TREAT" \
 | FINDRISC (published score) | 0.77 | 34% |
 | Age only (current rule logic) | 0.74 | 31% |
 
+**On real people (NHANES 2017–2020, 6,339 US adults without diagnosed diabetes; model frozen):** undiagnosed diabetes AUC 0.80 (95% CI 0.77–0.82) vs FINDRISC 0.77 (0.75–0.80) and age 0.68; difference vs FINDRISC +0.026 (0.013–0.039). Weakest in Non-Hispanic Asian adults (0.75). Run `python validation/nhanes_validate.py <folder with the P_*.xpt files>`; data are not redistributed here.
+
 Anchors: diabetes prevalence 20–79 synthetic 20.6% vs IDF 2024 20.7%; undiagnosed share 58% vs 64%.
 
 Outcome simulation (600 people contacted per 90-day cycle, 200 cycles): S.C.O.P.E reaches about twice as many genuinely high-risk people as age/sex rules, and about 1.7× with tailoring effects halved. Tailoring effects are explicit assumptions in `engine/engine.py` (`EFFECTS`).
